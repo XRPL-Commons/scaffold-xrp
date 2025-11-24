@@ -1,0 +1,31 @@
+[project]
+name = "bedrock"
+version = "0.1.0"
+authors = ["Your Name"]
+
+[build]
+source = "contract/src/lib.rs"
+output = "contract/target/wasm32-unknown-unknown/release"
+target = "wasm32-unknown-unknown"
+
+[local_node]
+config_dir = ".bedrock/node-config"
+docker_image = "transia/alphanet:latest"
+ledger_interval = 1000
+
+[networks.local]
+url = "ws://localhost:6006"
+network_id = 63456
+faucet_url = "http://localhost:8080/faucet"
+
+[networks.alphanet]
+url = "wss://alphanet.nerdnest.xyz"
+network_id = 21465
+faucet_url = "https://alphanet.faucet.nerdnest.xyz/accounts"
+
+[contracts.main]
+source = "contract/src/lib.rs"
+abi = "contract/build/abi.json"
+
+[wallets]
+keystore = ".wallets/keystore.json"

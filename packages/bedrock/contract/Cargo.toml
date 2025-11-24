@@ -1,0 +1,17 @@
+[package]
+name = "bedrock"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+xrpl-wasm-std = { git = "https://github.com/Transia-RnD/craft.git", branch = "dangell/smart-contracts", package = "xrpl-wasm-std" }
+xrpl-wasm-macros= { git = "https://github.com/Transia-RnD/craft.git", branch = "dangell/smart-contracts", package = "xrpl-wasm-macros" }
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+panic = "abort"
