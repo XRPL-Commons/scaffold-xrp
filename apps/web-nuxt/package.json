@@ -1,0 +1,29 @@
+{
+  "name": "web-nuxt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "events": "^3.3.0",
+    "process": "^0.11.10",
+    "xrpl": "^3.0.0",
+    "xrpl-connect": "^0.4.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^0.7.0",
+    "@nuxtjs/tailwindcss": "^6.12.0",
+    "eslint": "^9.0.0",
+    "nuxt": "^3.14.0",
+    "typescript": "^5.3.3",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0"
+  }
+}

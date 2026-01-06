@@ -5,7 +5,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import { execSync } from 'child_process';
-import { existsSync, rmSync, readFileSync } from 'fs';
+import { existsSync, rmSync, readFileSync, renameSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import validateProjectName from 'validate-npm-package-name';
@@ -18,12 +18,13 @@ const program = new Command();
 
 interface Answers {
   projectName: string;
+  framework: 'nextjs' | 'nuxt';
   packageManager: 'pnpm' | 'npm' | 'yarn';
 }
 
 async function main() {
   console.log(chalk.cyan.bold('\nWelcome to Scaffold-XRP!\n'));
-  console.log(chalk.gray('Create a Next.js dApp for XRPL with smart contracts\n'));
+  console.log(chalk.gray('Create a dApp for XRPL with smart contracts\n'));
 
   program
     .name('create-xrp')
@@ -74,6 +75,17 @@ async function promptUser(providedName?: string): Promise<Answers> {
 
   questions.push({
     type: 'list',
+    name: 'framework',
+    message: 'Which framework do you want to use?',
+    choices: [
+      { name: 'Next.js (React)', value: 'nextjs' },
+      { name: 'Nuxt (Vue)', value: 'nuxt' },
+    ],
+    default: 'nextjs',
+  });
+
+  questions.push({
+    type: 'list',
     name: 'packageManager',
     message: 'Which package manager do you want to use?',
     choices: [
@@ -88,12 +100,13 @@ async function promptUser(providedName?: string): Promise<Answers> {
 
   return {
     projectName: providedName || answers.projectName,
+    framework: answers.framework,
     packageManager: answers.packageManager,
   };
 }
 
 async function scaffoldProject(answers: Answers) {
-  const { projectName, packageManager } = answers;
+  const { projectName, framework, packageManager } = answers;
   const targetDir = join(process.cwd(), projectName);
 
   console.log(chalk.cyan(`\nCreating project in ${chalk.bold(targetDir)}\n`));
@@ -125,6 +138,35 @@ async function scaffoldProject(answers: Answers) {
     const cliDir = join(targetDir, 'packages', 'create-xrp');
     if (existsSync(cliDir)) {
       rmSync(cliDir, { recursive: true, force: true });
+    }
+
+    // Remove non-selected framework and rename if needed
+    const appsDir = join(targetDir, 'apps');
+    if (framework === 'nextjs') {
+      // Remove Nuxt app
+      const nuxtDir = join(appsDir, 'web-nuxt');
+      if (existsSync(nuxtDir)) {
+        rmSync(nuxtDir, { recursive: true, force: true });
+      }
+    } else {
+      // Remove Next.js app
+      const nextDir = join(appsDir, 'web');
+      if (existsSync(nextDir)) {
+        rmSync(nextDir, { recursive: true, force: true });
+      }
+      // Rename Nuxt app to 'web'
+      const nuxtDir = join(appsDir, 'web-nuxt');
+      if (existsSync(nuxtDir)) {
+        renameSync(nuxtDir, join(appsDir, 'web'));
+        // Update the web app's package.json name from 'web-nuxt' to 'web'
+        const webPackageJsonPath = join(appsDir, 'web', 'package.json');
+        if (existsSync(webPackageJsonPath)) {
+          const { readFileSync, writeFileSync } = await import('fs');
+          const webPackageJson = JSON.parse(readFileSync(webPackageJsonPath, 'utf-8'));
+          webPackageJson.name = 'web';
+          writeFileSync(webPackageJsonPath, JSON.stringify(webPackageJson, null, 2) + '\n');
+        }
+      }
     }
 
     // Update package.json name
