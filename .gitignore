@@ -12,6 +12,11 @@ out/
 build
 dist/
 
+# Nuxt
+.nuxt/
+.output/
+
+
 # Production
 build
 
