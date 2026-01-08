@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { useWallet } from "./providers/WalletProvider";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { CheckCircle2, XCircle, Info } from "lucide-react";
 
 export function ContractInteraction() {
   const { walletManager, isConnected, addEvent, showStatus } = useWallet();
@@ -43,12 +49,11 @@ export function ContractInteraction() {
         TransactionType: "ContractCall",
         Account: walletManager.account.address,
         ContractAccount: contractAddress,
-        Fee: "1000000", // 1 XRP in drops
+        Fee: "1000000",
         FunctionName: stringToHex(functionName),
         ComputationAllowance: "1000000",
       };
 
-      // Add function arguments if provided
       if (functionArgs) {
         transaction.FunctionArguments = stringToHex(functionArgs);
       }
@@ -76,65 +81,66 @@ export function ContractInteraction() {
   };
 
   return (
-    <div className="card">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Interact with Contract</h2>
-        <button onClick={loadCounterExample} className="text-sm text-accent hover:underline">
-          Load Counter Example
-        </button>
-      </div>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Contract Interaction</CardTitle>
+            <CardDescription>Call functions on deployed contracts</CardDescription>
+          </div>
+          <Button variant="ghost" size="sm" onClick={loadCounterExample}>
+            Load Example
+          </Button>
+        </div>
+      </CardHeader>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Contract Address
-          </label>
-          <input
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="contractAddress">Contract Address</Label>
+          <Input
+            id="contractAddress"
             type="text"
             value={contractAddress}
             onChange={(e) => setContractAddress(e.target.value)}
             placeholder="rAddress..."
-            className="input"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Function Name</label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="functionName">Function Name</Label>
+          <Input
+            id="functionName"
             type="text"
             value={functionName}
             onChange={(e) => setFunctionName(e.target.value)}
             placeholder="e.g., increment, get_value"
-            className="input"
           />
           {functionName && (
-            <div className="mt-1 text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Hex: {stringToHex(functionName)}
-            </div>
+            </p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Function Arguments (optional)
-          </label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="functionArgs">Arguments (optional)</Label>
+          <Input
+            id="functionArgs"
             type="text"
             value={functionArgs}
             onChange={(e) => setFunctionArgs(e.target.value)}
             placeholder="e.g., 5, hello"
-            className="input"
           />
           {functionArgs && (
-            <div className="mt-1 text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Hex: {stringToHex(functionArgs)}
-            </div>
+            </p>
           )}
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-          <strong>Example Counter Contract Functions:</strong>
-          <ul className="list-disc list-inside mt-1 space-y-1">
+        <div className="rounded-md border p-3 text-sm">
+          <p className="font-medium mb-2">Counter Contract Functions</p>
+          <ul className="text-muted-foreground space-y-1 text-xs">
             <li>increment - Increase counter by 1</li>
             <li>decrement - Decrease counter by 1</li>
             <li>get_value - Get current counter value</li>
@@ -143,53 +149,39 @@ export function ContractInteraction() {
         </div>
 
         {isConnected && contractAddress && functionName && (
-          <button
-            onClick={handleCallContract}
-            disabled={isCalling}
-            className="w-full bg-accent text-white py-2 px-4 rounded-lg font-semibold hover:bg-accent/90 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
+          <Button onClick={handleCallContract} disabled={isCalling} className="w-full">
             {isCalling ? "Calling Contract..." : "Call Contract"}
-          </button>
+          </Button>
         )}
 
         {!isConnected && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-            <strong>Connect your wallet</strong> to interact with contracts
-          </div>
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>Connect your wallet to interact with contracts</AlertDescription>
+          </Alert>
         )}
 
         {callResult && (
-          <div
-            className={`p-4 rounded-lg ${
-              callResult.success
-                ? "bg-green-50 border border-green-200"
-                : "bg-red-50 border border-red-200"
-            }`}
-          >
+          <Alert variant={callResult.success ? "success" : "destructive"}>
             {callResult.success ? (
-              <>
-                <h3 className="font-bold text-green-800 mb-2">Contract Called!</h3>
-                <p className="text-sm text-green-700">
-                  <strong>Hash:</strong> {callResult.hash}
-                </p>
-                {callResult.id && (
-                  <p className="text-sm text-green-700">
-                    <strong>ID:</strong> {callResult.id}
-                  </p>
-                )}
-                <p className="text-xs text-green-600 mt-2">
-                  ✅ Contract function has been called successfully
-                </p>
-              </>
+              <CheckCircle2 className="h-4 w-4" />
             ) : (
-              <>
-                <h3 className="font-bold text-red-800 mb-2">Call Failed</h3>
-                <p className="text-sm text-red-700">{callResult.error}</p>
-              </>
+              <XCircle className="h-4 w-4" />
             )}
-          </div>
+            <AlertTitle>{callResult.success ? "Contract Called" : "Call Failed"}</AlertTitle>
+            <AlertDescription>
+              {callResult.success ? (
+                <div className="space-y-1">
+                  <p className="font-mono text-xs break-all">Hash: {callResult.hash}</p>
+                  {callResult.id && <p className="text-xs">ID: {callResult.id}</p>}
+                </div>
+              ) : (
+                <p>{callResult.error}</p>
+              )}
+            </AlertDescription>
+          </Alert>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
