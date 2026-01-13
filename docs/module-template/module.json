@@ -1,0 +1,23 @@
+{
+  "name": "example-module",
+  "version": "1.0.0",
+  "description": "An example module for scaffold-xrp",
+  "author": "Your Name",
+  "compatibility": {
+    "scaffold-xrp": ">=0.1.0",
+    "frameworks": ["nextjs", "nuxt"]
+  },
+  "files": {
+    "components": ["components/"],
+    "hooks": ["hooks/"],
+    "composables": ["composables/"],
+    "lib": ["lib/"],
+    "contracts": ["contracts/"],
+    "pages": ["pages/"],
+    "data": ["data/"]
+  },
+  "dependencies": {
+    "npm": [],
+    "modules": []
+  }
+}
