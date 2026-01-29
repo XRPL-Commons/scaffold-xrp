@@ -96,12 +96,12 @@ async function promptUser(providedName?: string): Promise<Answers> {
     default: 'pnpm',
   });
 
-  const answers = await inquirer.prompt(questions);
+  const answers = await inquirer.prompt<Partial<Answers>>(questions);
 
   return {
-    projectName: providedName || answers.projectName,
-    framework: answers.framework,
-    packageManager: answers.packageManager,
+    projectName: providedName || answers.projectName as string,
+    framework: answers.framework as Answers['framework'],
+    packageManager: answers.packageManager as Answers['packageManager'],
   };
 }
 
