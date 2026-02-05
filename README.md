@@ -24,7 +24,7 @@ A Next.js-based development stack for building decentralized applications on XRP
 
 ### Installation
 
-```bash
+```
 # Clone the repository
 git clone https://github.com/yourusername/scaffold-xrp.git
 cd scaffold-xrp
@@ -93,14 +93,14 @@ scaffold-xrp/
 
 ### Install Rust
 
-```bash
+```
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup target add wasm32-unknown-unknown
 ```
 
 ### Build the Counter Contract
 
-```bash
+```
 cd packages/bedrock
 cargo build --target wasm32-unknown-unknown --release
 ```
@@ -116,7 +116,7 @@ See [packages/bedrock/README.md](packages/bedrock/README.md) for more details.
 
 ### Available Commands
 
-```bash
+```
 pnpm dev          # Start development server
 pnpm build        # Build all packages
 pnpm lint         # Lint all packages
@@ -128,7 +128,7 @@ pnpm clean        # Clean build artifacts
 
 Create a `.env.local` file in `apps/web/`:
 
-```env
+```
 # Optional: Configure default network
 NEXT_PUBLIC_DEFAULT_NETWORK=alphanet
 ```
