@@ -24,7 +24,7 @@ A Next.js-based development stack for building decentralized applications on XRP
 
 ### Installation
 
-\`\`\`bash
+```bash
 # Clone the repository
 git clone https://github.com/yourusername/scaffold-xrp.git
 cd scaffold-xrp
@@ -34,13 +34,13 @@ pnpm install
 
 # Start the development server
 pnpm dev
-\`\`\`
+```
 
 The app will be available at [http://localhost:3000](http://localhost:3000)
 
 ## Project Structure
 
-\`\`\`
+```
 scaffold-xrp/
 ├── apps/
 │   └── web/                 # Next.js application
@@ -55,7 +55,7 @@ scaffold-xrp/
 ├── package.json
 ├── pnpm-workspace.yaml
 └── turbo.json
-\`\`\`
+```
 
 ## Usage
 
@@ -93,22 +93,22 @@ scaffold-xrp/
 
 ### Install Rust
 
-\`\`\`bash
+```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup target add wasm32-unknown-unknown
-\`\`\`
+```
 
 ### Build the Counter Contract
 
-\`\`\`bash
+```bash
 cd packages/bedrock
 cargo build --target wasm32-unknown-unknown --release
-\`\`\`
+```
 
 The compiled WASM file will be at:
-\`\`\`
+```
 target/wasm32-unknown-unknown/release/counter.wasm
-\`\`\`
+```
 
 See [packages/bedrock/README.md](packages/bedrock/README.md) for more details.
 
@@ -116,22 +116,22 @@ See [packages/bedrock/README.md](packages/bedrock/README.md) for more details.
 
 ### Available Commands
 
-\`\`\`bash
+```bash
 pnpm dev          # Start development server
 pnpm build        # Build all packages
 pnpm lint         # Lint all packages
 pnpm format       # Format code with Prettier
 pnpm clean        # Clean build artifacts
-\`\`\`
+```
 
 ### Environment Variables
 
 Create a `.env.local` file in `apps/web/`:
 
-\`\`\`env
+```env
 # Optional: Configure default network
 NEXT_PUBLIC_DEFAULT_NETWORK=alphanet
-\`\`\`
+```
 
 ## Networks
 
