@@ -1,6 +1,6 @@
 {
   "name": "create-xrp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "CLI tool to scaffold XRPL dApps with Next.js and smart contracts",
   "main": "dist/index.js",
   "bin": {
