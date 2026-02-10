@@ -5,7 +5,7 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
 import { execSync } from 'child_process';
-import { existsSync, rmSync, readFileSync, renameSync } from 'fs';
+import { existsSync, rmSync, readFileSync, renameSync, writeFileSync, cpSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import validateProjectName from 'validate-npm-package-name';
@@ -19,12 +19,13 @@ const program = new Command();
 interface Answers {
   projectName: string;
   framework: 'nextjs' | 'nuxt';
+  smartContract: boolean;
   packageManager: 'pnpm' | 'npm' | 'yarn';
 }
 
 async function main() {
   console.log(chalk.cyan.bold('\nWelcome to Scaffold-XRP!\n'));
-  console.log(chalk.gray('Create a dApp for XRPL with smart contracts\n'));
+  console.log(chalk.gray('Create a dApp for the XRP Ledger\n'));
 
   program
     .name('create-xrp')
@@ -85,6 +86,13 @@ async function promptUser(providedName?: string): Promise<Answers> {
   });
 
   questions.push({
+    type: 'confirm',
+    name: 'smartContract',
+    message: 'Do you want to include smart contract support?',
+    default: true,
+  });
+
+  questions.push({
     type: 'list',
     name: 'packageManager',
     message: 'Which package manager do you want to use?',
@@ -101,12 +109,13 @@ async function promptUser(providedName?: string): Promise<Answers> {
   return {
     projectName: providedName || answers.projectName as string,
     framework: answers.framework as Answers['framework'],
+    smartContract: answers.smartContract as boolean,
     packageManager: answers.packageManager as Answers['packageManager'],
   };
 }
 
 async function scaffoldProject(answers: Answers) {
-  const { projectName, framework, packageManager } = answers;
+  const { projectName, framework, smartContract, packageManager } = answers;
   const targetDir = join(process.cwd(), projectName);
 
   console.log(chalk.cyan(`\nCreating project in ${chalk.bold(targetDir)}\n`));
@@ -126,7 +135,7 @@ async function scaffoldProject(answers: Answers) {
   }
 
   // Clean up
-  const cleanSpinner = ora('Cleaning up...').start();
+  const cleanSpinner = ora('Setting up project...').start();
   try {
     // Remove .git directory
     const gitDir = join(targetDir, '.git');
@@ -161,7 +170,6 @@ async function scaffoldProject(answers: Answers) {
         // Update the web app's package.json name from 'web-nuxt' to 'web'
         const webPackageJsonPath = join(appsDir, 'web', 'package.json');
         if (existsSync(webPackageJsonPath)) {
-          const { readFileSync, writeFileSync } = await import('fs');
           const webPackageJson = JSON.parse(readFileSync(webPackageJsonPath, 'utf-8'));
           webPackageJson.name = 'web';
           writeFileSync(webPackageJsonPath, JSON.stringify(webPackageJson, null, 2) + '\n');
@@ -169,19 +177,129 @@ async function scaffoldProject(answers: Answers) {
       }
     }
 
-    // Update package.json name
-    const packageJsonPath = join(targetDir, 'package.json');
-    if (existsSync(packageJsonPath)) {
-      const { readFileSync, writeFileSync } = await import('fs');
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-      packageJson.name = projectName;
-      writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
+    const webDir = join(appsDir, 'web');
+
+    if (smartContract) {
+      // With smart contracts: keep monorepo structure, clean up variant files
+      const variantFiles = [
+        framework === 'nextjs'
+          ? join(webDir, 'app', 'page-without-sc.js')
+          : join(webDir, 'pages', 'index-without-sc.vue'),
+        join(targetDir, 'README-without-sc.md'),
+      ];
+      if (framework === 'nuxt') {
+        variantFiles.push(join(webDir, 'nuxt.config-without-sc.ts'));
+      }
+      for (const file of variantFiles) {
+        if (existsSync(file)) {
+          rmSync(file);
+        }
+      }
+
+      // Update root package.json name
+      const packageJsonPath = join(targetDir, 'package.json');
+      if (existsSync(packageJsonPath)) {
+        const rootPkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+        rootPkg.name = projectName;
+        writeFileSync(packageJsonPath, JSON.stringify(rootPkg, null, 2) + '\n');
+      }
+    } else {
+      // Without smart contracts: flatten to a simple project
+
+      // 1. Swap page variant files
+      if (framework === 'nextjs') {
+        const pagePath = join(webDir, 'app', 'page.js');
+        const noScPagePath = join(webDir, 'app', 'page-without-sc.js');
+        if (existsSync(noScPagePath)) {
+          rmSync(pagePath);
+          renameSync(noScPagePath, pagePath);
+        }
+      } else {
+        const indexPath = join(webDir, 'pages', 'index.vue');
+        const noScIndexPath = join(webDir, 'pages', 'index-without-sc.vue');
+        if (existsSync(noScIndexPath)) {
+          rmSync(indexPath);
+          renameSync(noScIndexPath, indexPath);
+        }
+        // Swap nuxt.config variant
+        const nuxtConfigPath = join(webDir, 'nuxt.config.ts');
+        const noScNuxtConfigPath = join(webDir, 'nuxt.config-without-sc.ts');
+        if (existsSync(noScNuxtConfigPath)) {
+          rmSync(nuxtConfigPath);
+          renameSync(noScNuxtConfigPath, nuxtConfigPath);
+        }
+      }
+
+      // 2. Remove ContractInteraction component
+      const contractComponentName = framework === 'nextjs'
+        ? 'ContractInteraction.js'
+        : 'ContractInteraction.vue';
+      const contractComponent = join(webDir, 'components', contractComponentName);
+      if (existsSync(contractComponent)) {
+        rmSync(contractComponent);
+      }
+
+      // 3. Remove packages directory (bedrock)
+      const packagesDir = join(targetDir, 'packages');
+      if (existsSync(packagesDir)) {
+        rmSync(packagesDir, { recursive: true, force: true });
+      }
+
+      // 4. Swap README and remove monorepo-specific docs
+      const readmeNoScPath = join(targetDir, 'README-without-sc.md');
+      const readmePath = join(targetDir, 'README.md');
+      if (existsSync(readmeNoScPath)) {
+        rmSync(readmePath);
+        renameSync(readmeNoScPath, readmePath);
+      }
+      const monorepoDocFiles = ['QUICKSTART.md', 'CONTRIBUTING.md'];
+      for (const file of monorepoDocFiles) {
+        const filePath = join(targetDir, file);
+        if (existsSync(filePath)) {
+          rmSync(filePath);
+        }
+      }
+
+      // 5. Flatten: move web app contents to project root
+      // First, remove monorepo config files from root
+      const monorepoConfigFiles = ['pnpm-workspace.yaml', 'turbo.json'];
+      for (const file of monorepoConfigFiles) {
+        const filePath = join(targetDir, file);
+        if (existsSync(filePath)) {
+          rmSync(filePath);
+        }
+      }
+
+      // Remove root package.json (will be replaced by web app's)
+      const rootPkgPath = join(targetDir, 'package.json');
+      if (existsSync(rootPkgPath)) {
+        rmSync(rootPkgPath);
+      }
+
+      // Copy all web app contents to project root
+      const webContents = readdirSync(webDir);
+      for (const item of webContents) {
+        const src = join(webDir, item);
+        const dest = join(targetDir, item);
+        cpSync(src, dest, { recursive: true });
+      }
+
+      // Remove apps directory
+      rmSync(appsDir, { recursive: true, force: true });
+
+      // Update the web app's package.json (now at root) with project name
+      const newPkgPath = join(targetDir, 'package.json');
+      if (existsSync(newPkgPath)) {
+        const webPkg = JSON.parse(readFileSync(newPkgPath, 'utf-8'));
+        webPkg.name = projectName;
+        writeFileSync(newPkgPath, JSON.stringify(webPkg, null, 2) + '\n');
+      }
     }
 
-    cleanSpinner.succeed('Cleaned up template');
+    cleanSpinner.succeed('Project set up');
   } catch (error) {
-    cleanSpinner.fail('Failed to clean up');
-    console.log(chalk.yellow('\nWarning: Some cleanup steps failed\n'));
+    cleanSpinner.fail('Failed to set up project');
+    console.log(chalk.yellow('\nWarning: Some setup steps failed\n'));
   }
 
   // Install dependencies
@@ -212,7 +330,8 @@ async function scaffoldProject(answers: Answers) {
   console.log(chalk.green.bold('\nProject created successfully!\n'));
   console.log(chalk.cyan('Next steps:\n'));
   console.log(chalk.white(`  cd ${projectName}`));
-  console.log(chalk.white(`  ${packageManager === 'npm' ? 'npm run' : packageManager} dev\n`));
+  const devCommand = packageManager === 'npm' ? 'npm run' : packageManager;
+  console.log(chalk.white(`  ${devCommand} dev\n`));
   console.log(chalk.gray('Your app will be running at http://localhost:3000\n'));
   console.log(chalk.cyan('Learn more:'));
   console.log(chalk.white('  Documentation: https://github.com/XRPL-Commons/scaffold-xrp'));
