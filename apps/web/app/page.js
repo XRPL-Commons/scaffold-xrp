@@ -4,7 +4,6 @@ import { Header } from "../components/Header";
 import { AccountInfo } from "../components/AccountInfo";
 import { ContractInteraction } from "../components/ContractInteraction";
 import { TransactionForm } from "../components/TransactionForm";
-import { MPTokenCard } from "../components/MPTokenCard";
 
 export default function Home() {
   return (
@@ -24,7 +23,6 @@ export default function Home() {
             <AccountInfo />
             <ContractInteraction />
             <TransactionForm />
-            <MPTokenCard />
           </div>
 
           <div className="mt-8 rounded-lg border p-6">

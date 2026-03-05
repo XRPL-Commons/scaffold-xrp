@@ -8,6 +8,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
+import { stringToHex } from "../lib/utils";
 
 export function ContractInteraction() {
   const { walletManager, isConnected, addEvent, showStatus } = useWallet();
@@ -16,13 +17,6 @@ export function ContractInteraction() {
   const [functionArgs, setFunctionArgs] = useState("");
   const [isCalling, setIsCalling] = useState(false);
   const [callResult, setCallResult] = useState(null);
-
-  const stringToHex = (str) => {
-    return Array.from(str)
-      .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
-      .join("")
-      .toUpperCase();
-  };
 
   const loadCounterExample = () => {
     setFunctionName("increment");
@@ -49,7 +43,7 @@ export function ContractInteraction() {
         TransactionType: "ContractCall",
         Account: walletManager.account.address,
         ContractAccount: contractAddress,
-        Fee: "1000000",
+        Fee: "1000000", // 1 XRP in drops
         FunctionName: stringToHex(functionName),
         ComputationAllowance: "1000000",
       };
