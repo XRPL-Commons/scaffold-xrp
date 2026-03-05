@@ -13,8 +13,8 @@ const callResult = ref<{
 } | null>(null)
 
 const stringToHex = (str: string) => {
-  return Array.from(str)
-    .map((c) => c.charCodeAt(0).toString(16).padStart(2, '0'))
+  return Array.from(new TextEncoder().encode(str))
+    .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
     .toUpperCase()
 }
@@ -49,7 +49,6 @@ const handleCallContract = async () => {
       ComputationAllowance: '1000000',
     }
 
-    // Add function arguments if provided
     if (functionArgs.value) {
       transaction.FunctionArguments = stringToHex(functionArgs.value)
     }
@@ -81,58 +80,67 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
 </script>
 
 <template>
-  <div class="card">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold">Interact with Contract</h2>
-      <button @click="loadCounterExample" class="text-sm text-accent hover:underline">
-        Load Counter Example
+  <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex items-center justify-between p-6 pb-3">
+      <div>
+        <h3 class="text-base font-semibold leading-none tracking-tight">Contract Interaction</h3>
+        <p class="text-sm text-muted-foreground">Call functions on deployed contracts</p>
+      </div>
+      <button
+        @click="loadCounterExample"
+        class="inline-flex items-center justify-center rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground h-8 px-3"
+      >
+        Load Example
       </button>
     </div>
 
-    <div class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
+    <div class="p-6 pt-0 space-y-4">
+      <div class="space-y-2">
+        <label for="contractAddress" class="text-sm font-medium leading-none">
           Contract Address
         </label>
         <input
+          id="contractAddress"
           v-model="contractAddress"
           type="text"
           placeholder="rAddress..."
-          class="input"
+          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Function Name</label>
+      <div class="space-y-2">
+        <label for="functionName" class="text-sm font-medium leading-none">Function Name</label>
         <input
+          id="functionName"
           v-model="functionName"
           type="text"
           placeholder="e.g., increment, get_value"
-          class="input"
+          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
-        <div v-if="functionName" class="mt-1 text-xs text-gray-500">
+        <p v-if="functionName" class="text-xs text-muted-foreground">
           Hex: {{ functionNameHex }}
-        </div>
+        </p>
       </div>
 
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Function Arguments (optional)
+      <div class="space-y-2">
+        <label for="functionArgs" class="text-sm font-medium leading-none">
+          Arguments (optional)
         </label>
         <input
+          id="functionArgs"
           v-model="functionArgs"
           type="text"
           placeholder="e.g., 5, hello"
-          class="input"
+          class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
-        <div v-if="functionArgs" class="mt-1 text-xs text-gray-500">
+        <p v-if="functionArgs" class="text-xs text-muted-foreground">
           Hex: {{ functionArgsHex }}
-        </div>
+        </p>
       </div>
 
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-        <strong>Example Counter Contract Functions:</strong>
-        <ul class="list-disc list-inside mt-1 space-y-1">
+      <div class="rounded-md border p-3 text-sm">
+        <p class="font-medium mb-2">Counter Contract Functions</p>
+        <ul class="text-muted-foreground space-y-1 text-xs">
           <li>increment - Increase counter by 1</li>
           <li>decrement - Decrease counter by 1</li>
           <li>get_value - Get current counter value</li>
@@ -144,42 +152,35 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
         v-if="isConnected && contractAddress && functionName"
         @click="handleCallContract"
         :disabled="isCalling"
-        class="w-full bg-accent text-white py-2 px-4 rounded-lg font-semibold hover:bg-accent/90 disabled:bg-gray-400 disabled:cursor-not-allowed"
+        class="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
       >
         {{ isCalling ? 'Calling Contract...' : 'Call Contract' }}
       </button>
 
       <div
         v-if="!isConnected"
-        class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800"
+        class="rounded-lg border p-4"
       >
-        <strong>Connect your wallet</strong> to interact with contracts
+        <p class="text-sm text-muted-foreground">Connect your wallet to interact with contracts</p>
       </div>
 
       <div
         v-if="callResult"
         :class="[
-          'p-4 rounded-lg',
+          'rounded-lg border p-4',
           callResult.success
-            ? 'bg-green-50 border border-green-200'
-            : 'bg-red-50 border border-red-200'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+            : 'border-destructive/50 bg-destructive/10 text-destructive'
         ]"
       >
         <template v-if="callResult.success">
-          <h3 class="font-bold text-green-800 mb-2">Contract Called!</h3>
-          <p class="text-sm text-green-700">
-            <strong>Hash:</strong> {{ callResult.hash }}
-          </p>
-          <p v-if="callResult.id" class="text-sm text-green-700">
-            <strong>ID:</strong> {{ callResult.id }}
-          </p>
-          <p class="text-xs text-green-600 mt-2">
-            Contract function has been called successfully
-          </p>
+          <h4 class="mb-1 font-medium">Contract Called</h4>
+          <p class="font-mono text-xs break-all">Hash: {{ callResult.hash }}</p>
+          <p v-if="callResult.id" class="text-xs mt-1">ID: {{ callResult.id }}</p>
         </template>
         <template v-else>
-          <h3 class="font-bold text-red-800 mb-2">Call Failed</h3>
-          <p class="text-sm text-red-700">{{ callResult.error }}</p>
+          <h4 class="mb-1 font-medium">Call Failed</h4>
+          <p class="text-sm">{{ callResult.error }}</p>
         </template>
       </div>
     </div>

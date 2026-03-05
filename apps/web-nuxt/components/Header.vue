@@ -1,36 +1,34 @@
 <script setup lang="ts">
 const { statusMessage } = useWallet()
 
-const statusClass = computed(() => {
+const statusVariant = computed(() => {
   if (!statusMessage.value) return ''
   const type = statusMessage.value.type
-  if (type === 'success') return 'bg-green-50 text-green-700'
-  if (type === 'error') return 'bg-red-50 text-red-700'
-  if (type === 'warning') return 'bg-yellow-50 text-yellow-700'
-  return 'bg-blue-50 text-blue-700'
+  if (type === 'success') return 'bg-emerald-100 text-emerald-800'
+  if (type === 'error') return 'bg-destructive/10 text-destructive'
+  if (type === 'warning') return 'bg-amber-100 text-amber-800'
+  return 'bg-secondary text-secondary-foreground'
 })
 </script>
 
 <template>
-  <header class="bg-white border-b border-gray-200">
-    <div class="container mx-auto px-4 py-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-          <div class="w-10 h-10 bg-xrpl rounded-lg flex items-center justify-center">
-            <span class="text-white font-bold text-xl">X</span>
-          </div>
-          <span class="text-xl font-bold">Scaffold-XRP</span>
+  <header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div class="container flex h-14 items-center">
+      <div class="flex items-center gap-2">
+        <div class="flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background">
+          <span class="font-semibold text-sm">X</span>
         </div>
+        <span class="font-semibold">Scaffold-XRP</span>
+      </div>
 
-        <div class="flex items-center space-x-4">
-          <div
-            v-if="statusMessage"
-            :class="['text-sm px-3 py-1 rounded-lg', statusClass]"
-          >
-            {{ statusMessage.message }}
-          </div>
-          <WalletConnector />
-        </div>
+      <div class="flex flex-1 items-center justify-end gap-3">
+        <span
+          v-if="statusMessage"
+          :class="['inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold', statusVariant]"
+        >
+          {{ statusMessage.message }}
+        </span>
+        <WalletConnector />
       </div>
     </div>
   </header>
