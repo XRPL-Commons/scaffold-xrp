@@ -4,11 +4,18 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { existsSync, rmSync, readFileSync, renameSync, writeFileSync, cpSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import validateProjectName from 'validate-npm-package-name';
+
+import type { Answers } from './types.js';
+import { CliError } from './errors.js';
+import { installModules, initScaffoldConfig } from './modules.js';
+import { addCommand } from './commands/add.js';
+import { listCommand } from './commands/list.js';
+import { removeCommand } from './commands/remove.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -16,31 +23,63 @@ const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 
 
 const program = new Command();
 
-interface Answers {
-  projectName: string;
-  framework: 'nextjs' | 'nuxt';
-  smartContract: boolean;
-  packageManager: 'pnpm' | 'npm' | 'yarn';
-}
-
 async function main() {
-  console.log(chalk.cyan.bold('\nWelcome to Scaffold-XRP!\n'));
-  console.log(chalk.gray('Create a dApp for the XRP Ledger\n'));
-
   program
     .name('create-xrp')
     .version(packageJson.version, '-v, --version', 'Output the current version')
-    .description('Scaffold a new XRPL dApp project')
+    .description('Scaffold a new XRPL dApp project');
+
+  // Main scaffolding command
+  program
     .argument('[project-name]', 'Name of your project')
-    .action(async (projectName?: string) => {
-      const answers = await promptUser(projectName);
-      await scaffoldProject(answers);
+    .option('-m, --modules <modules>', 'Comma-separated list of modules to install')
+    .option('--framework <framework>', 'Framework to use (nextjs or nuxt)')
+    .option('--pm <packageManager>', 'Package manager to use (pnpm, npm, or yarn)')
+    .action(async (projectName?: string, options?: { modules?: string; framework?: string; pm?: string }) => {
+      // If no project name and no subcommand, show welcome and prompt
+      if (!projectName && !options?.modules) {
+        console.log(chalk.cyan.bold('\nWelcome to Scaffold-XRP!\n'));
+        console.log(chalk.gray('Create a dApp for XRPL with smart contracts\n'));
+      }
+
+      const answers = await promptUser(projectName, options);
+      await scaffoldProject(answers, options?.modules);
+    });
+
+  // Add module command
+  program
+    .command('add [module]')
+    .description('Add a module to your project')
+    .action(async (module?: string) => {
+      await addCommand(module);
+    });
+
+  // List modules command
+  program
+    .command('list')
+    .alias('ls')
+    .description('List installed and available modules')
+    .option('-r, --remote', 'Show modules from the remote registry')
+    .action(async (options: { remote?: boolean }) => {
+      await listCommand(options);
+    });
+
+  // Remove module command
+  program
+    .command('remove [module]')
+    .alias('rm')
+    .description('Remove an installed module')
+    .action(async (module?: string) => {
+      await removeCommand(module);
     });
 
   await program.parseAsync(process.argv);
 }
 
-async function promptUser(providedName?: string): Promise<Answers> {
+async function promptUser(
+  providedName?: string,
+  options?: { framework?: string; pm?: string }
+): Promise<Answers> {
   const questions = [];
 
   if (!providedName) {
@@ -74,17 +113,23 @@ async function promptUser(providedName?: string): Promise<Answers> {
     }
   }
 
-  questions.push({
-    type: 'list',
-    name: 'framework',
-    message: 'Which framework do you want to use?',
-    choices: [
-      { name: 'Next.js (React)', value: 'nextjs' },
-      { name: 'Nuxt (Vue)', value: 'nuxt' },
-    ],
-    default: 'nextjs',
-  });
+  // Framework selection
+  if (options?.framework && ['nextjs', 'nuxt'].includes(options.framework)) {
+    // Use provided framework
+  } else {
+    questions.push({
+      type: 'list',
+      name: 'framework',
+      message: 'Which framework do you want to use?',
+      choices: [
+        { name: 'Next.js (React)', value: 'nextjs' },
+        { name: 'Nuxt (Vue)', value: 'nuxt' },
+      ],
+      default: 'nextjs',
+    });
+  }
 
+  // Smart contract support
   questions.push({
     type: 'confirm',
     name: 'smartContract',
@@ -92,29 +137,34 @@ async function promptUser(providedName?: string): Promise<Answers> {
     default: true,
   });
 
-  questions.push({
-    type: 'list',
-    name: 'packageManager',
-    message: 'Which package manager do you want to use?',
-    choices: [
-      { name: 'pnpm (recommended)', value: 'pnpm' },
-      { name: 'npm', value: 'npm' },
-      { name: 'yarn', value: 'yarn' },
-    ],
-    default: 'pnpm',
-  });
+  // Package manager selection
+  if (options?.pm && ['pnpm', 'npm', 'yarn'].includes(options.pm)) {
+    // Use provided package manager
+  } else {
+    questions.push({
+      type: 'list',
+      name: 'packageManager',
+      message: 'Which package manager do you want to use?',
+      choices: [
+        { name: 'pnpm (recommended)', value: 'pnpm' },
+        { name: 'npm', value: 'npm' },
+        { name: 'yarn', value: 'yarn' },
+      ],
+      default: 'pnpm',
+    });
+  }
 
   const answers = await inquirer.prompt<Partial<Answers>>(questions);
 
   return {
     projectName: providedName || answers.projectName as string,
-    framework: answers.framework as Answers['framework'],
+    framework: (options?.framework as 'nextjs' | 'nuxt') || answers.framework as 'nextjs' | 'nuxt',
     smartContract: answers.smartContract as boolean,
-    packageManager: answers.packageManager as Answers['packageManager'],
+    packageManager: (options?.pm as 'pnpm' | 'npm' | 'yarn') || answers.packageManager as 'pnpm' | 'npm' | 'yarn',
   };
 }
 
-async function scaffoldProject(answers: Answers) {
+async function scaffoldProject(answers: Answers, modulesArg?: string) {
   const { projectName, framework, smartContract, packageManager } = answers;
   const targetDir = join(process.cwd(), projectName);
 
@@ -123,8 +173,9 @@ async function scaffoldProject(answers: Answers) {
   // Clone the template
   const cloneSpinner = ora('Cloning template...').start();
   try {
-    execSync(
-      `git clone --depth 1 https://github.com/XRPL-Commons/scaffold-xrp.git "${targetDir}"`,
+    execFileSync(
+      'git',
+      ['clone', '--depth', '1', 'https://github.com/XRPL-Commons/scaffold-xrp.git', targetDir],
       { stdio: 'pipe' }
     );
     cloneSpinner.succeed('Template cloned');
@@ -261,7 +312,6 @@ async function scaffoldProject(answers: Answers) {
       }
 
       // 5. Flatten: move web app contents to project root
-      // First, remove monorepo config files from root
       const monorepoConfigFiles = ['pnpm-workspace.yaml', 'turbo.json'];
       for (const file of monorepoConfigFiles) {
         const filePath = join(targetDir, file);
@@ -302,11 +352,14 @@ async function scaffoldProject(answers: Answers) {
     console.log(chalk.yellow('\nWarning: Some setup steps failed\n'));
   }
 
+  // Initialize scaffold config
+  initScaffoldConfig(targetDir, framework);
+
   // Install dependencies
   const installSpinner = ora(`Installing dependencies with ${packageManager}...`).start();
   try {
-    const installCommand = packageManager === 'yarn' ? 'yarn' : `${packageManager} install`;
-    execSync(installCommand, { cwd: targetDir, stdio: 'pipe' });
+    const installArgs = packageManager === 'yarn' ? [] : ['install'];
+    execFileSync(packageManager, installArgs, { cwd: targetDir, stdio: 'pipe' });
     installSpinner.succeed('Dependencies installed');
   } catch (error) {
     installSpinner.fail('Failed to install dependencies');
@@ -314,12 +367,28 @@ async function scaffoldProject(answers: Answers) {
     console.log(chalk.cyan(`   cd ${projectName} && ${packageManager} install\n`));
   }
 
+  // Install modules if specified
+  if (modulesArg) {
+    const modulesList = modulesArg.split(',').map((m) => m.trim()).filter(Boolean);
+    if (modulesList.length > 0) {
+      console.log(chalk.cyan('\nInstalling modules...\n'));
+      const result = await installModules(targetDir, modulesList, framework, packageManager);
+
+      if (result.installed.length > 0) {
+        console.log(chalk.green(`\nInstalled modules: ${result.installed.join(', ')}`));
+      }
+      if (result.failed.length > 0) {
+        console.log(chalk.yellow(`\nFailed to install: ${result.failed.join(', ')}`));
+      }
+    }
+  }
+
   // Initialize git
   const gitSpinner = ora('Initializing git repository...').start();
   try {
-    execSync('git init', { cwd: targetDir, stdio: 'pipe' });
-    execSync('git add .', { cwd: targetDir, stdio: 'pipe' });
-    execSync('git commit -m "Initial commit from create-xrp"', { cwd: targetDir, stdio: 'pipe' });
+    execFileSync('git', ['init'], { cwd: targetDir, stdio: 'pipe' });
+    execFileSync('git', ['add', '.'], { cwd: targetDir, stdio: 'pipe' });
+    execFileSync('git', ['commit', '-m', 'Initial commit from create-xrp'], { cwd: targetDir, stdio: 'pipe' });
     gitSpinner.succeed('Git repository initialized');
   } catch (error) {
     gitSpinner.fail('Failed to initialize git');
@@ -333,6 +402,13 @@ async function scaffoldProject(answers: Answers) {
   const devCommand = packageManager === 'npm' ? 'npm run' : packageManager;
   console.log(chalk.white(`  ${devCommand} dev\n`));
   console.log(chalk.gray('Your app will be running at http://localhost:3000\n'));
+
+  // Module management info
+  console.log(chalk.cyan('Module management:\n'));
+  console.log(chalk.white('  npx create-xrp add <module>    # Add a module'));
+  console.log(chalk.white('  npx create-xrp list            # List modules'));
+  console.log(chalk.white('  npx create-xrp remove <module> # Remove a module\n'));
+
   console.log(chalk.cyan('Learn more:'));
   console.log(chalk.white('  Documentation: https://github.com/XRPL-Commons/scaffold-xrp'));
   console.log(chalk.white('  Discord: https://discord.gg/xrpl\n'));
@@ -340,6 +416,10 @@ async function scaffoldProject(answers: Answers) {
 }
 
 main().catch((error) => {
+  if (error instanceof CliError) {
+    console.error(chalk.red(`\n${error.message}\n`));
+    process.exit(error.exitCode);
+  }
   console.error(chalk.red('\nAn unexpected error occurred:\n'));
   console.error(error);
   process.exit(1);
