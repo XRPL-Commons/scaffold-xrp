@@ -10,7 +10,7 @@ target = "wasm32-unknown-unknown"
 
 [local_node]
 config_dir = ".bedrock/node-config"
-docker_image = "transia/alphanet:latest"
+docker_image = "transia/cluster:f5d78179c9d1fbaf8bff8b77a052e263df90faa1"
 ledger_interval = 1000
 
 [networks.local]
@@ -29,3 +29,7 @@ abi = "contract/build/abi.json"
 
 [wallets]
 keystore = ".wallets/keystore.json"
+
+[spec]
+version = "XLS-101d"
+reference = "https://github.com/XRPLF/XRPL-Standards/discussions/271"
