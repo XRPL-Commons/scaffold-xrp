@@ -16,6 +16,8 @@ import {
   readdirSync,
 } from 'fs';
 import { join, basename } from 'path';
+import { tmpdir } from 'os';
+import { randomUUID } from 'crypto';
 import type {
   ModuleConfig,
   Registry,
@@ -55,20 +57,27 @@ export function validateModuleName(name: string): { valid: boolean; error?: stri
  */
 export async function fetchRegistry(registryUrl?: string): Promise<Registry> {
   const url = registryUrl || DEFAULT_REGISTRY_URL;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) {
       throw new Error(`Failed to fetch registry: ${response.statusText}`);
     }
     return (await response.json()) as Registry;
   } catch (error) {
-    // Return empty registry if fetch fails
-    console.log(
-      chalk.yellow(`\nWarning: Could not fetch registry from ${url}`)
-    );
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log(chalk.yellow(`\nWarning: Registry fetch timed out after 10 seconds`));
+    } else {
+      console.log(
+        chalk.yellow(`\nWarning: Could not fetch registry from ${url}`)
+      );
+    }
     console.log(chalk.gray('You can still install modules using direct git URLs\n'));
     return { version: '0.0.0', modules: {} };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -82,7 +91,8 @@ export function readScaffoldConfig(projectDir: string): ScaffoldConfig | null {
   }
   try {
     return JSON.parse(readFileSync(configPath, 'utf-8'));
-  } catch {
+  } catch (error) {
+    console.error(chalk.red(`Failed to parse ${SCAFFOLD_CONFIG_FILE}: ${error instanceof Error ? error.message : error}`));
     return null;
   }
 }
@@ -188,7 +198,8 @@ function cloneModule(gitUrl: string, tempDir: string): boolean {
     rmSync(tempDir, { recursive: true, force: true });
     execFileSync('git', ['clone', '--depth', '1', gitUrl, tempDir], { stdio: 'pipe' });
     return true;
-  } catch {
+  } catch (error) {
+    console.error(chalk.red(`Failed to clone from ${gitUrl}: ${error instanceof Error ? error.message : error}`));
     return false;
   }
 }
@@ -203,7 +214,8 @@ function readModuleConfig(moduleDir: string): ModuleConfig | null {
   }
   try {
     return JSON.parse(readFileSync(configPath, 'utf-8'));
-  } catch {
+  } catch (error) {
+    console.error(chalk.red(`Failed to parse ${MODULE_CONFIG_FILE}: ${error instanceof Error ? error.message : error}`));
     return null;
   }
 }
@@ -325,7 +337,8 @@ function installModuleDependencies(
     const webDir = join(projectDir, 'apps', 'web');
     execFileSync(packageManager, [subcommand, ...dependencies], { cwd: webDir, stdio: 'pipe' });
     return true;
-  } catch {
+  } catch (error) {
+    console.error(chalk.red(`Failed to install dependencies: ${error instanceof Error ? error.message : error}`));
     return false;
   }
 }
@@ -370,7 +383,8 @@ async function runPostInstall(
       },
     });
     return true;
-  } catch {
+  } catch (error) {
+    console.error(chalk.red(`Post-install script failed: ${error instanceof Error ? error.message : error}`));
     return false;
   }
 }
@@ -398,10 +412,10 @@ export async function installModule(
   if (spinner) spinner.text = `Cloning module: ${resolved.name}`;
 
   // Clone to temp directory
-  const tempDir = join(projectDir, '.scaffold-xrp-temp', resolved.name);
+  const tempDir = join(tmpdir(), 'scaffold-xrp-' + randomUUID());
   if (!cloneModule(resolved.url, tempDir)) {
     spinner?.fail(`Failed to clone module: ${resolved.name}`);
-    rmSync(join(projectDir, '.scaffold-xrp-temp'), { recursive: true, force: true });
+    rmSync(tempDir, { recursive: true, force: true });
     return { success: false, error: `Failed to clone module from ${resolved.url}` };
   }
 
@@ -409,7 +423,7 @@ export async function installModule(
   const moduleConfig = readModuleConfig(tempDir);
   if (!moduleConfig) {
     spinner?.fail(`Invalid module: ${resolved.name} (missing module.json)`);
-    rmSync(join(projectDir, '.scaffold-xrp-temp'), { recursive: true, force: true });
+    rmSync(tempDir, { recursive: true, force: true });
     return { success: false, error: 'Module is missing module.json configuration file' };
   }
 
@@ -417,7 +431,7 @@ export async function installModule(
   const nameValidation = validateModuleName(moduleConfig.name);
   if (!nameValidation.valid) {
     spinner?.fail(`Invalid module name: ${nameValidation.error}`);
-    rmSync(join(projectDir, '.scaffold-xrp-temp'), { recursive: true, force: true });
+    rmSync(tempDir, { recursive: true, force: true });
     return { success: false, error: `Invalid module name: ${nameValidation.error}` };
   }
 
@@ -427,7 +441,7 @@ export async function installModule(
     !moduleConfig.compatibility.frameworks.includes(framework)
   ) {
     spinner?.fail(`Module ${resolved.name} is not compatible with ${framework}`);
-    rmSync(join(projectDir, '.scaffold-xrp-temp'), { recursive: true, force: true });
+    rmSync(tempDir, { recursive: true, force: true });
     return {
       success: false,
       error: `Module is not compatible with ${framework}. Supported: ${moduleConfig.compatibility.frameworks.join(', ')}`,
@@ -441,7 +455,7 @@ export async function installModule(
     copyModuleFiles(tempDir, projectDir, moduleConfig, framework);
   } catch (error) {
     spinner?.fail(`Failed to copy module files`);
-    rmSync(join(projectDir, '.scaffold-xrp-temp'), { recursive: true, force: true });
+    rmSync(tempDir, { recursive: true, force: true });
     return { success: false, error: 'Failed to copy module files' };
   }
 
@@ -470,7 +484,7 @@ export async function installModule(
   writeScaffoldConfig(projectDir, config);
 
   // Cleanup temp directory
-  rmSync(join(projectDir, '.scaffold-xrp-temp'), { recursive: true, force: true });
+  rmSync(tempDir, { recursive: true, force: true });
 
   spinner?.succeed(`Installed module: ${moduleConfig.name} v${moduleConfig.version}`);
 

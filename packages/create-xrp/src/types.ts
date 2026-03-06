@@ -30,7 +30,6 @@ export interface ModuleConfig {
   };
   dependencies?: {
     npm?: string[];
-    modules?: string[];
   };
   postInstall?: string;
 }
