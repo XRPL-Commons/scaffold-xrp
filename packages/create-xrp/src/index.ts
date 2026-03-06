@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import validateProjectName from 'validate-npm-package-name';
 
 import type { Answers } from './types.js';
+import { CliError } from './errors.js';
 import { installModules, initScaffoldConfig } from './modules.js';
 import { addCommand } from './commands/add.js';
 import { listCommand } from './commands/list.js';
@@ -415,6 +416,10 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
 }
 
 main().catch((error) => {
+  if (error instanceof CliError) {
+    console.error(chalk.red(`\n${error.message}\n`));
+    process.exit(error.exitCode);
+  }
   console.error(chalk.red('\nAn unexpected error occurred:\n'));
   console.error(error);
   process.exit(1);

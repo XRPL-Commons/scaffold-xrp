@@ -13,23 +13,20 @@ import {
   readScaffoldConfig,
   initScaffoldConfig,
 } from '../modules.js';
+import { CliError } from '../errors.js';
 
 export async function addCommand(moduleSource?: string): Promise<void> {
   const projectDir = process.cwd();
 
   // Check if we're in a scaffold-xrp project
   if (!isScaffoldXrpProject(projectDir)) {
-    console.log(chalk.red('\nError: Not in a scaffold-xrp project directory.'));
-    console.log(chalk.gray('Run this command from the root of your scaffold-xrp project.\n'));
-    process.exit(1);
+    throw new CliError('Not in a scaffold-xrp project directory.\nRun this command from the root of your scaffold-xrp project.');
   }
 
   // Detect framework
   const framework = detectFramework(projectDir);
   if (!framework) {
-    console.log(chalk.red('\nError: Could not detect framework.'));
-    console.log(chalk.gray('Make sure apps/web exists with a Next.js or Nuxt configuration.\n'));
-    process.exit(1);
+    throw new CliError('Could not detect framework.\nMake sure apps/web exists with a Next.js or Nuxt configuration.');
   }
 
   // Ensure scaffold config exists
@@ -56,7 +53,7 @@ export async function addCommand(moduleSource?: string): Promise<void> {
       console.log(chalk.yellow('No modules available in the registry.'));
       console.log(chalk.gray('You can install a module using a direct git URL:\n'));
       console.log(chalk.white('  npx create-xrp add https://github.com/user/repo\n'));
-      process.exit(0);
+      return;
     }
 
     moduleChoices.push({
@@ -93,6 +90,10 @@ export async function addCommand(moduleSource?: string): Promise<void> {
     }
   }
 
+  if (!selectedModule) {
+    throw new CliError('No module selected');
+  }
+
   // Check if already installed
   if (config.installedModules[selectedModule]) {
     console.log(chalk.yellow(`\nModule "${selectedModule}" is already installed.`));
@@ -105,7 +106,7 @@ export async function addCommand(moduleSource?: string): Promise<void> {
       },
     ]);
     if (!reinstall) {
-      process.exit(0);
+      return;
     }
   }
 
@@ -119,8 +120,7 @@ export async function addCommand(moduleSource?: string): Promise<void> {
   });
 
   if (!result.success) {
-    console.log(chalk.red(`\nFailed to install module: ${result.error}\n`));
-    process.exit(1);
+    throw new CliError(`Failed to install module: ${result.error}`);
   }
 
   console.log(chalk.green.bold('\nModule installed successfully!\n'));
