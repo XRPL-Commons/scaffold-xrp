@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { useWallet } from "./providers/WalletProvider";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 export function TransactionForm() {
   const { walletManager, isConnected, addEvent, showStatus } = useWallet();
@@ -40,7 +46,6 @@ export function TransactionForm() {
       showStatus("Transaction submitted successfully!", "success");
       addEvent("Transaction Submitted", txResult);
 
-      // Clear form
       setDestination("");
       setAmount("");
     } catch (error) {
@@ -60,79 +65,67 @@ export function TransactionForm() {
   }
 
   return (
-    <div className="card">
-      <h2 className="text-xl font-bold mb-4">Send Transaction</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Destination Address
-          </label>
-          <input
-            type="text"
-            placeholder="rN7n7otQDd6FczFgLdlqtyMVrn3HMfXoQT"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Amount (drops)
-          </label>
-          <input
-            type="number"
-            placeholder="1000000"
-            min="1"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
-            required
-          />
-          <small className="text-xs text-gray-500 mt-1 block">
-            1 XRP = 1,000,000 drops
-          </small>
-        </div>
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-accent text-white py-2 px-4 rounded-lg font-semibold hover:bg-accent/90 disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {isLoading ? "Signing & Submitting..." : "Sign & Submit Transaction"}
-        </button>
-      </form>
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Send XRP</CardTitle>
+        <CardDescription>Transfer XRP to another address</CardDescription>
+      </CardHeader>
 
-      {result && (
-        <div
-          className={`mt-4 p-4 rounded-lg ${
-            result.success
-              ? "bg-green-50 border border-green-200"
-              : "bg-red-50 border border-red-200"
-          }`}
-        >
-          {result.success ? (
-            <>
-              <h3 className="font-bold text-green-800 mb-2">Transaction Submitted!</h3>
-              <p className="text-sm text-green-700">
-                <strong>Hash:</strong> {result.hash}
-              </p>
-              {result.id && (
-                <p className="text-sm text-green-700">
-                  <strong>ID:</strong> {result.id}
-                </p>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="destination">Destination Address</Label>
+            <Input
+              id="destination"
+              type="text"
+              placeholder="rN7n7otQDd6FczFgLdlqtyMVrn3HMfXoQT"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="amount">Amount (drops)</Label>
+            <Input
+              id="amount"
+              type="number"
+              placeholder="1000000"
+              min="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+            <p className="text-xs text-muted-foreground">1 XRP = 1,000,000 drops</p>
+          </div>
+
+          <Button type="submit" disabled={isLoading} className="w-full">
+            {isLoading ? "Signing & Submitting..." : "Sign & Submit"}
+          </Button>
+        </form>
+
+        {result && (
+          <Alert variant={result.success ? "success" : "destructive"} className="mt-4">
+            {result.success ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : (
+              <XCircle className="h-4 w-4" />
+            )}
+            <AlertTitle>{result.success ? "Transaction Submitted" : "Transaction Failed"}</AlertTitle>
+            <AlertDescription>
+              {result.success ? (
+                <div className="space-y-1">
+                  <p className="font-mono text-xs break-all">Hash: {result.hash}</p>
+                  {result.id && <p className="text-xs">ID: {result.id}</p>}
+                  <p className="text-xs">Transaction has been signed and submitted to the ledger</p>
+                </div>
+              ) : (
+                <p>{result.error}</p>
               )}
-              <p className="text-xs text-green-600 mt-2">
-                ✅ Transaction has been signed and submitted to the ledger
-              </p>
-            </>
-          ) : (
-            <>
-              <h3 className="font-bold text-red-800 mb-2">Transaction Failed</h3>
-              <p className="text-sm text-red-700">{result.error}</p>
-            </>
-          )}
-        </div>
-      )}
-    </div>
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
   );
 }

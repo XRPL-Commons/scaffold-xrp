@@ -3,24 +3,27 @@ const { isConnected, accountInfo } = useWallet()
 </script>
 
 <template>
-  <div v-if="isConnected && accountInfo" class="card">
-    <h2 class="text-xl font-bold mb-4">Account Info</h2>
-    <div class="space-y-3">
-      <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-        <span class="text-sm font-medium text-gray-600">Address:</span>
-        <span class="text-sm font-mono text-gray-900">{{ accountInfo.address }}</span>
-      </div>
-      <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-        <span class="text-sm font-medium text-gray-600">Network:</span>
-        <span class="text-sm text-gray-900">{{ accountInfo.network }}</span>
-      </div>
-      <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-        <span class="text-sm font-medium text-gray-600">Wallet:</span>
-        <span class="text-sm text-gray-900">{{ accountInfo.walletName }}</span>
-      </div>
+  <div v-if="isConnected && accountInfo" class="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div class="flex flex-col space-y-1.5 p-6 pb-3">
+      <h3 class="text-base font-semibold leading-none tracking-tight">Account</h3>
+      <p class="text-sm text-muted-foreground">Your connected wallet details</p>
     </div>
-    <p class="mt-3 text-xs text-gray-500">
-      Click the button showing your address to disconnect
-    </p>
+    <div class="p-6 pt-0 space-y-3">
+      <div class="flex items-center justify-between rounded-md border p-3">
+        <span class="text-sm text-muted-foreground">Address</span>
+        <code class="text-xs font-mono">{{ accountInfo.address }}</code>
+      </div>
+      <div class="flex items-center justify-between rounded-md border p-3">
+        <span class="text-sm text-muted-foreground">Network</span>
+        <span class="text-sm">{{ accountInfo.network }}</span>
+      </div>
+      <div class="flex items-center justify-between rounded-md border p-3">
+        <span class="text-sm text-muted-foreground">Wallet</span>
+        <span class="text-sm">{{ accountInfo.walletName }}</span>
+      </div>
+      <p class="text-xs text-muted-foreground">
+        Click your address in the header to disconnect
+      </p>
+    </div>
   </div>
 </template>
