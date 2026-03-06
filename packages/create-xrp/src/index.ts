@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { existsSync, rmSync, readFileSync, renameSync, writeFileSync, cpSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -172,8 +172,9 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
   // Clone the template
   const cloneSpinner = ora('Cloning template...').start();
   try {
-    execSync(
-      `git clone --depth 1 https://github.com/XRPL-Commons/scaffold-xrp.git "${targetDir}"`,
+    execFileSync(
+      'git',
+      ['clone', '--depth', '1', 'https://github.com/XRPL-Commons/scaffold-xrp.git', targetDir],
       { stdio: 'pipe' }
     );
     cloneSpinner.succeed('Template cloned');
@@ -356,8 +357,8 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
   // Install dependencies
   const installSpinner = ora(`Installing dependencies with ${packageManager}...`).start();
   try {
-    const installCommand = packageManager === 'yarn' ? 'yarn' : `${packageManager} install`;
-    execSync(installCommand, { cwd: targetDir, stdio: 'pipe' });
+    const installArgs = packageManager === 'yarn' ? [] : ['install'];
+    execFileSync(packageManager, installArgs, { cwd: targetDir, stdio: 'pipe' });
     installSpinner.succeed('Dependencies installed');
   } catch (error) {
     installSpinner.fail('Failed to install dependencies');
@@ -384,9 +385,9 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
   // Initialize git
   const gitSpinner = ora('Initializing git repository...').start();
   try {
-    execSync('git init', { cwd: targetDir, stdio: 'pipe' });
-    execSync('git add .', { cwd: targetDir, stdio: 'pipe' });
-    execSync('git commit -m "Initial commit from create-xrp"', { cwd: targetDir, stdio: 'pipe' });
+    execFileSync('git', ['init'], { cwd: targetDir, stdio: 'pipe' });
+    execFileSync('git', ['add', '.'], { cwd: targetDir, stdio: 'pipe' });
+    execFileSync('git', ['commit', '-m', 'Initial commit from create-xrp'], { cwd: targetDir, stdio: 'pipe' });
     gitSpinner.succeed('Git repository initialized');
   } catch (error) {
     gitSpinner.fail('Failed to initialize git');

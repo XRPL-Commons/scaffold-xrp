@@ -4,7 +4,7 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import {
   existsSync,
   rmSync,
@@ -167,7 +167,7 @@ export async function resolveModuleSource(
 function cloneModule(gitUrl: string, tempDir: string): boolean {
   try {
     rmSync(tempDir, { recursive: true, force: true });
-    execSync(`git clone --depth 1 "${gitUrl}" "${tempDir}"`, { stdio: 'pipe' });
+    execFileSync('git', ['clone', '--depth', '1', gitUrl, tempDir], { stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -302,23 +302,9 @@ function installModuleDependencies(
   }
 
   try {
-    const depsString = dependencies.join(' ');
-    let command: string;
-
-    switch (packageManager) {
-      case 'pnpm':
-        command = `pnpm add ${depsString}`;
-        break;
-      case 'yarn':
-        command = `yarn add ${depsString}`;
-        break;
-      default:
-        command = `npm install ${depsString}`;
-    }
-
-    // Install in the web app directory
+    const subcommand = packageManager === 'npm' ? 'install' : 'add';
     const webDir = join(projectDir, 'apps', 'web');
-    execSync(command, { cwd: webDir, stdio: 'pipe' });
+    execFileSync(packageManager, [subcommand, ...dependencies], { cwd: webDir, stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -339,8 +325,7 @@ function runPostInstall(
   }
 
   try {
-    // Pass project info as environment variables
-    execSync(`node "${postInstallScript}"`, {
+    execFileSync('node', [postInstallScript], {
       cwd: projectDir,
       stdio: 'pipe',
       env: {
