@@ -32,6 +32,24 @@ const DEFAULT_REGISTRY_URL =
 const SCAFFOLD_CONFIG_FILE = '.scaffold-xrp.json';
 const MODULE_CONFIG_FILE = 'module.json';
 
+const MODULE_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+export function validateModuleName(name: string): { valid: boolean; error?: string } {
+  if (!name || name.length === 0) {
+    return { valid: false, error: 'Module name cannot be empty' };
+  }
+  if (name.length > 64) {
+    return { valid: false, error: 'Module name cannot exceed 64 characters' };
+  }
+  if (name.includes('..') || name.includes('/') || name.includes('\\')) {
+    return { valid: false, error: 'Module name contains invalid path characters' };
+  }
+  if (!MODULE_NAME_PATTERN.test(name)) {
+    return { valid: false, error: 'Module name can only contain letters, numbers, hyphens, and underscores' };
+  }
+  return { valid: true };
+}
+
 /**
  * Fetch the module registry
  */
@@ -395,6 +413,14 @@ export async function installModule(
     return { success: false, error: 'Module is missing module.json configuration file' };
   }
 
+  // Validate module name
+  const nameValidation = validateModuleName(moduleConfig.name);
+  if (!nameValidation.valid) {
+    spinner?.fail(`Invalid module name: ${nameValidation.error}`);
+    rmSync(join(projectDir, '.scaffold-xrp-temp'), { recursive: true, force: true });
+    return { success: false, error: `Invalid module name: ${nameValidation.error}` };
+  }
+
   // Check framework compatibility
   if (
     moduleConfig.compatibility?.frameworks &&
@@ -488,6 +514,12 @@ export function removeModule(
   projectDir: string,
   moduleName: string
 ): { success: boolean; error?: string } {
+  // Validate module name before using in paths
+  const nameValidation = validateModuleName(moduleName);
+  if (!nameValidation.valid) {
+    return { success: false, error: `Invalid module name: ${nameValidation.error}` };
+  }
+
   const config = readScaffoldConfig(projectDir);
   if (!config) {
     return { success: false, error: 'Not a scaffold-xrp project (missing .scaffold-xrp.json)' };
