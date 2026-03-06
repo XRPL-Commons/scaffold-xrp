@@ -9,6 +9,7 @@ import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
 import { stringToHex } from "../lib/utils";
+import { buildContractCall } from "../lib/xls101";
 
 export function ContractInteraction() {
   const { walletManager, isConnected, addEvent, showStatus } = useWallet();
@@ -39,18 +40,12 @@ export function ContractInteraction() {
       setIsCalling(true);
       setCallResult(null);
 
-      const transaction = {
-        TransactionType: "ContractCall",
-        Account: walletManager.account.address,
-        ContractAccount: contractAddress,
-        Fee: "1000000", // 1 XRP in drops
-        FunctionName: stringToHex(functionName),
-        ComputationAllowance: "1000000",
-      };
-
-      if (functionArgs) {
-        transaction.FunctionArguments = stringToHex(functionArgs);
-      }
+      const transaction = buildContractCall({
+        account: walletManager.account.address,
+        contractAccount: contractAddress,
+        functionName,
+        functionArgs: functionArgs || undefined,
+      });
 
       const txResult = await walletManager.signAndSubmit(transaction);
 
@@ -107,7 +102,7 @@ export function ContractInteraction() {
             type="text"
             value={functionName}
             onChange={(e) => setFunctionName(e.target.value)}
-            placeholder="e.g., increment, get_value"
+            placeholder="e.g., increment, get_count"
           />
           {functionName && (
             <p className="text-xs text-muted-foreground">
@@ -133,11 +128,14 @@ export function ContractInteraction() {
         </div>
 
         <div className="rounded-md border p-3 text-sm">
-          <p className="font-medium mb-2">Counter Contract Functions</p>
+          <p className="font-medium mb-2">Counter Contract Functions (XLS-101)</p>
           <ul className="text-muted-foreground space-y-1 text-xs">
+            <li>get_count - Get current counter value</li>
             <li>increment - Increase counter by 1</li>
             <li>decrement - Decrease counter by 1</li>
-            <li>get_value - Get current counter value</li>
+            <li>set_count - Set counter to a specific value</li>
+            <li>add - Add an amount to counter</li>
+            <li>subtract - Subtract an amount from counter</li>
             <li>reset - Reset counter to 0</li>
           </ul>
         </div>

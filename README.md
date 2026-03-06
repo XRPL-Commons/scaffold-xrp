@@ -15,6 +15,17 @@ A Next.js-based development stack for building decentralized applications on XRP
 - **Debug Panel** - Execute custom XRPL commands and view network info
 - **Sample Contract** - Counter contract example in Rust
 
+## XLS-101 Smart Contract Support
+
+This project implements smart contracts aligned with the [XLS-101d specification](https://github.com/XRPLF/XRPL-Standards/discussions/271), the XRPL standard for WebAssembly smart contracts. The included counter contract demonstrates:
+
+- **State management** via ContractData key-value storage
+- **Typed parameters** using the STParameters format (max 4 per function)
+- **Lifecycle callbacks** (init, user_delete, clawback) triggered by dedicated transaction types
+- **ABI definition** with typed parameters and return values
+
+See [docs/xls-101-reference.md](docs/xls-101-reference.md) for the full specification reference.
+
 ## Quick Start
 
 ### Prerequisites
@@ -49,9 +60,11 @@ scaffold-xrp/
 │       └── lib/             # Utilities and configurations
 ├── packages/
 │   └── bedrock/             # Smart contracts (Rust)
-│       ├── src/
-│       │   └── lib.rs       # Counter contract example
-│       └── Cargo.toml
+│       ├── contract/
+│       │   ├── src/
+│       │   │   └── lib.rs   # Counter contract example
+│       │   └── Cargo.toml
+│       └── bedrock.toml
 ├── package.json
 ├── pnpm-workspace.yaml
 └── turbo.json
@@ -102,7 +115,7 @@ rustup target add wasm32-unknown-unknown
 
 ```
 cd packages/bedrock
-cargo build --target wasm32-unknown-unknown --release
+bedrock build --release
 ```
 
 The compiled WASM file will be at:
@@ -181,7 +194,8 @@ NEXT_PUBLIC_DEFAULT_NETWORK=alphanet
 ## Resources
 
 - [XRPL Documentation](https://xrpl.org/)
-- [XRPL Smart Contracts Guide](https://xrpl.org/docs.html)
+- [XLS-101d Smart Contracts Spec](https://github.com/XRPLF/XRPL-Standards/discussions/271)
+- [XRPL WASM Standard Library](https://github.com/Transia-RnD/craft)
 - [Bedrock GitHub](https://github.com/XRPL-Commons/Bedrock)
 - [Scaffold-ETH-2](https://github.com/scaffold-eth/scaffold-eth-2)
 
