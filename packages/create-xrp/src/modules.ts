@@ -4,6 +4,7 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
+import inquirer from 'inquirer';
 import { execFileSync } from 'child_process';
 import {
   existsSync,
@@ -312,15 +313,30 @@ function installModuleDependencies(
 }
 
 /**
- * Run post-install script if it exists
+ * Run post-install script if it exists (requires user consent)
  */
-function runPostInstall(
+async function runPostInstall(
   moduleDir: string,
   projectDir: string,
   framework: 'nextjs' | 'nuxt'
-): boolean {
+): Promise<boolean> {
   const postInstallScript = join(moduleDir, 'install.js');
   if (!existsSync(postInstallScript)) {
+    return true;
+  }
+
+  console.log(chalk.yellow(`\nThis module includes a post-install script: ${postInstallScript}`));
+  const { consent } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'consent',
+      message: 'Do you want to run the post-install script?',
+      default: false,
+    },
+  ]);
+
+  if (!consent) {
+    console.log(chalk.gray('Skipping post-install script.'));
     return true;
   }
 
@@ -412,7 +428,7 @@ export async function installModule(
   }
 
   // Run post-install script
-  if (!runPostInstall(tempDir, projectDir, framework)) {
+  if (!(await runPostInstall(tempDir, projectDir, framework))) {
     spinner?.warn(`Post-install script failed for: ${moduleConfig.name}`);
   }
 
