@@ -69,8 +69,8 @@ importers:
         specifier: ^3.0.0
         version: 3.1.0
       xrpl-connect:
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: ^0.6.0
+        version: 0.6.0
     devDependencies:
       autoprefixer:
         specifier: ^10.4.16
@@ -106,8 +106,8 @@ importers:
         specifier: ^3.0.0
         version: 3.1.0
       xrpl-connect:
-        specifier: ^0.4.0
-        version: 0.4.0
+        specifier: ^0.6.0
+        version: 0.6.0
     devDependencies:
       '@nuxt/eslint':
         specifier: ^0.7.0
@@ -2609,6 +2609,7 @@ packages:
     engines: {node: '>= 10.0.0'}
     dependencies:
       is-glob: 4.0.3
+      napi-wasm: 1.1.3
       picomatch: 4.0.3
     dev: true
     bundledDependencies:
@@ -7811,6 +7812,10 @@ packages:
     hasBin: true
     dev: true
 
+  /napi-wasm@1.1.3:
+    resolution: {integrity: sha512-h/4nMGsHjZDCYmQVNODIrYACVJ+I9KItbG+0si6W/jSjdA9JbWDoU4LLeMXVcEQGHjttI2tuXqDrbGF7qkUHHg==}
+    dev: true
+
   /natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
     dev: true
@@ -11446,8 +11451,8 @@ packages:
     engines: {node: '>=12'}
     dev: true
 
-  /xrpl-connect@0.4.0:
-    resolution: {integrity: sha512-fsHsu/QrCSgFG1cOamRM/9Z/lRwIoKg9U4vPqHr+dOd6bAo4C2Ho+BsB7V6QB7Jzj9eOULcITxeaZExtENNB0g==}
+  /xrpl-connect@0.6.0:
+    resolution: {integrity: sha512-w7Izg0QqH6iU9/wURYyTG3sFzyeBpIc/c5MGm1eHCW3z1Yj97OrIU0wCCNgAzVHAE4QFF6AF7CrVxIm/jYMz5Q==}
     dev: false
 
   /xrpl@3.1.0:
