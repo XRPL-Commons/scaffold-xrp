@@ -593,6 +593,9 @@ export function isScaffoldXrpProject(dir: string): boolean {
   // Check for typical scaffold-xrp structure (monorepo with primitives)
   const hasAppsWeb = existsSync(join(dir, 'apps', 'web'));
   const hasTurboJson = existsSync(join(dir, 'turbo.json'));
+  const hasXrplConnect =
+    existsSync(join(dir, 'apps', 'web', 'components', 'providers', 'WalletProvider.js')) ||
+    existsSync(join(dir, 'apps', 'web', 'composables', 'useWallet.ts'));
 
-  return hasAppsWeb && hasTurboJson;
+  return hasAppsWeb && hasTurboJson && hasXrplConnect;
 }

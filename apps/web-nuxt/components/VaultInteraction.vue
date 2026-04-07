@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const DEFAULT_FEE = '12'
+
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const vaultId = ref('')
@@ -32,7 +34,7 @@ const handleSubmit = async () => {
       Account: walletManager.value.account.address,
       VaultID: vaultId.value,
       Amount: amount.value,
-      Fee: '12',
+      Fee: DEFAULT_FEE,
     }
 
     const txResult = await walletManager.value.signAndSubmit(transaction as any)
@@ -125,7 +127,7 @@ const handleSubmit = async () => {
       </div>
 
       <button
-        v-if="isConnected && vaultId && amount"
+        v-if="isConnected"
         @click="handleSubmit"
         :disabled="isSubmitting"
         class="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"

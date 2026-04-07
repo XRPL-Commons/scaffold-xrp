@@ -9,6 +9,9 @@ import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
 
+const DEFAULT_FEE = "12";
+const RIPPLE_EPOCH_OFFSET = 946684800;
+
 export function EscrowInteraction() {
   const { walletManager, isConnected, addEvent, showStatus } = useWallet();
   const [action, setAction] = useState("finish");
@@ -16,6 +19,8 @@ export function EscrowInteraction() {
   const [sequence, setSequence] = useState("");
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
+  const [finishAfter, setFinishAfter] = useState("");
+  const [cancelAfter, setCancelAfter] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -37,13 +42,30 @@ export function EscrowInteraction() {
           setIsSubmitting(false);
           return;
         }
+        if (!finishAfter && !cancelAfter) {
+          showStatus("Please provide at least one of Finish After or Cancel After", "error");
+          setIsSubmitting(false);
+          return;
+        }
+        const nowRipple = Math.floor(Date.now() / 1000) - RIPPLE_EPOCH_OFFSET;
+        if (finishAfter && cancelAfter && parseInt(cancelAfter, 10) <= parseInt(finishAfter, 10)) {
+          showStatus("Cancel After must be greater than Finish After", "error");
+          setIsSubmitting(false);
+          return;
+        }
         transaction = {
           TransactionType: "EscrowCreate",
           Account: walletManager.account.address,
           Destination: destination,
           Amount: amount,
-          Fee: "12",
+          Fee: DEFAULT_FEE,
         };
+        if (finishAfter) {
+          transaction.FinishAfter = nowRipple + parseInt(finishAfter, 10);
+        }
+        if (cancelAfter) {
+          transaction.CancelAfter = nowRipple + parseInt(cancelAfter, 10);
+        }
       } else if (action === "finish") {
         if (!owner || !sequence) {
           showStatus("Please provide owner and sequence", "error");
@@ -55,7 +77,7 @@ export function EscrowInteraction() {
           Account: walletManager.account.address,
           Owner: owner,
           OfferSequence: parseInt(sequence, 10),
-          Fee: "12",
+          Fee: DEFAULT_FEE,
         };
       } else {
         if (!owner || !sequence) {
@@ -68,7 +90,7 @@ export function EscrowInteraction() {
           Account: walletManager.account.address,
           Owner: owner,
           OfferSequence: parseInt(sequence, 10),
-          Fee: "12",
+          Fee: DEFAULT_FEE,
         };
       }
 
@@ -149,6 +171,26 @@ export function EscrowInteraction() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g., 1000000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="escrowFinishAfter">Finish After (seconds from now)</Label>
+              <Input
+                id="escrowFinishAfter"
+                type="text"
+                value={finishAfter}
+                onChange={(e) => setFinishAfter(e.target.value)}
+                placeholder="e.g., 60"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="escrowCancelAfter">Cancel After (seconds from now)</Label>
+              <Input
+                id="escrowCancelAfter"
+                type="text"
+                value={cancelAfter}
+                onChange={(e) => setCancelAfter(e.target.value)}
+                placeholder="e.g., 3600"
               />
             </div>
           </>

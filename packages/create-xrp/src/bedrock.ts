@@ -10,6 +10,8 @@ import { join } from 'path';
 import { mkdirSync, existsSync } from 'fs';
 import type { Primitive } from './types.js';
 
+// SECURITY: This URL is passed to `curl | sh`. It MUST remain a compile-time
+// constant and never be derived from user input.
 const BEDROCK_INSTALL_URL =
   'https://raw.githubusercontent.com/XRPL-Commons/Bedrock/main/install.sh';
 
@@ -68,9 +70,11 @@ export async function ensureBedrock(): Promise<boolean> {
 
   const spinner = ora('Installing Bedrock CLI...').start();
   try {
+    spinner.stop();
     execSync(`curl -sSfL ${BEDROCK_INSTALL_URL} | sh`, {
       stdio: 'inherit',
     });
+    spinner.start('Verifying installation...');
 
     if (isBedrockInstalled()) {
       spinner.succeed('Bedrock CLI installed');

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+const DEFAULT_FEE = '12'
+const RIPPLE_EPOCH_OFFSET = 946684800
+
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const action = ref<'create' | 'finish' | 'cancel'>('finish')
@@ -6,6 +9,8 @@ const owner = ref('')
 const sequence = ref('')
 const destination = ref('')
 const amount = ref('')
+const finishAfter = ref('')
+const cancelAfter = ref('')
 const isSubmitting = ref(false)
 const result = ref<{
   success: boolean
@@ -32,12 +37,29 @@ const handleSubmit = async () => {
         isSubmitting.value = false
         return
       }
+      if (!finishAfter.value && !cancelAfter.value) {
+        showStatus('Please provide at least one of Finish After or Cancel After', 'error')
+        isSubmitting.value = false
+        return
+      }
+      const nowRipple = Math.floor(Date.now() / 1000) - RIPPLE_EPOCH_OFFSET
+      if (finishAfter.value && cancelAfter.value && parseInt(cancelAfter.value, 10) <= parseInt(finishAfter.value, 10)) {
+        showStatus('Cancel After must be greater than Finish After', 'error')
+        isSubmitting.value = false
+        return
+      }
       transaction = {
         TransactionType: 'EscrowCreate',
         Account: walletManager.value.account.address,
         Destination: destination.value,
         Amount: amount.value,
-        Fee: '12',
+        Fee: DEFAULT_FEE,
+      }
+      if (finishAfter.value) {
+        transaction.FinishAfter = nowRipple + parseInt(finishAfter.value, 10)
+      }
+      if (cancelAfter.value) {
+        transaction.CancelAfter = nowRipple + parseInt(cancelAfter.value, 10)
       }
     } else if (action.value === 'finish') {
       if (!owner.value || !sequence.value) {
@@ -50,7 +72,7 @@ const handleSubmit = async () => {
         Account: walletManager.value.account.address,
         Owner: owner.value,
         OfferSequence: parseInt(sequence.value, 10),
-        Fee: '12',
+        Fee: DEFAULT_FEE,
       }
     } else {
       if (!owner.value || !sequence.value) {
@@ -63,7 +85,7 @@ const handleSubmit = async () => {
         Account: walletManager.value.account.address,
         Owner: owner.value,
         OfferSequence: parseInt(sequence.value, 10),
-        Fee: '12',
+        Fee: DEFAULT_FEE,
       }
     }
 
@@ -155,6 +177,26 @@ const handleSubmit = async () => {
             v-model="amount"
             type="text"
             placeholder="e.g., 1000000"
+            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <div class="space-y-2">
+          <label for="escrowFinishAfter" class="text-sm font-medium leading-none">Finish After (seconds from now)</label>
+          <input
+            id="escrowFinishAfter"
+            v-model="finishAfter"
+            type="text"
+            placeholder="e.g., 60"
+            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <div class="space-y-2">
+          <label for="escrowCancelAfter" class="text-sm font-medium leading-none">Cancel After (seconds from now)</label>
+          <input
+            id="escrowCancelAfter"
+            v-model="cancelAfter"
+            type="text"
+            placeholder="e.g., 3600"
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>

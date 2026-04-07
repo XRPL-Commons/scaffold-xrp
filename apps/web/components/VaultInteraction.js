@@ -9,6 +9,8 @@ import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
 
+const DEFAULT_FEE = "12";
+
 export function VaultInteraction() {
   const { walletManager, isConnected, addEvent, showStatus } = useWallet();
   const [vaultId, setVaultId] = useState("");
@@ -37,7 +39,7 @@ export function VaultInteraction() {
         Account: walletManager.account.address,
         VaultID: vaultId,
         Amount: amount,
-        Fee: "12",
+        Fee: DEFAULT_FEE,
       };
 
       const txResult = await walletManager.signAndSubmit(transaction);
@@ -120,7 +122,7 @@ export function VaultInteraction() {
           </ul>
         </div>
 
-        {isConnected && vaultId && amount && (
+        {isConnected && (
           <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
             {isSubmitting ? "Submitting..." : `${action === "deposit" ? "Deposit" : "Withdraw"}`}
           </Button>

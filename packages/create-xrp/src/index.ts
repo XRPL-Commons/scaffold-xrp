@@ -138,10 +138,13 @@ async function promptUser(
   // Primitives selection (unless provided via CLI flag)
   let parsedPrimitives: Primitive[] | undefined;
   if (options?.primitives) {
-    parsedPrimitives = options.primitives
-      .split(',')
-      .map((p) => p.trim())
-      .filter((p): p is Primitive => ALL_PRIMITIVES.includes(p as Primitive));
+    const raw = options.primitives.split(',').map((p) => p.trim());
+    const invalid = raw.filter((p) => !ALL_PRIMITIVES.includes(p as Primitive));
+    if (invalid.length > 0) {
+      console.log(chalk.yellow(`Warning: unknown primitives ignored: ${invalid.join(', ')}`));
+      console.log(chalk.gray(`Valid primitives: ${ALL_PRIMITIVES.join(', ')}\n`));
+    }
+    parsedPrimitives = raw.filter((p): p is Primitive => ALL_PRIMITIVES.includes(p as Primitive));
   } else {
     questions.push({
       type: 'checkbox',
@@ -366,7 +369,10 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
   if (hasPrimitives) {
     const bedrockReady = await ensureBedrock();
     if (bedrockReady) {
-      initBedrockProject(targetDir, primitives);
+      const initialized = initBedrockProject(targetDir, primitives);
+      if (!initialized) {
+        console.log(chalk.yellow('\nBedrock project setup failed — you can retry manually after install.\n'));
+      }
     }
   }
 
