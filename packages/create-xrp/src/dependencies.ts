@@ -13,10 +13,13 @@ import type { Primitive } from './types.js';
 
 const XRPL_STANDARD = '^3.1.0';
 const XRPL_CONTRACT = 'npm:@transia/xrpl@^4.4.6-alpha.0';
+// Pinned (no ^) — pre-release with no semver guarantees; bump manually when a new build is available.
 const XRPL_VAULTS = 'npm:@willem-xrpl/xrpl@4.6.0-smartvaults.1';
 
 /**
  * Update the xrpl dependency in a web app's package.json based on selected primitives.
+ * This function owns the read-modify-write cycle for the target package.json — do not
+ * call it concurrently with other package.json mutations.
  *
  * When both contract and vault/escrow are selected, we use npm aliasing:
  *   "xrpl" → contract fork (used by ContractInteraction)

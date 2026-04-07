@@ -138,13 +138,14 @@ async function promptUser(
   // Primitives selection (unless provided via CLI flag)
   let parsedPrimitives: Primitive[] | undefined;
   if (options?.primitives) {
-    const raw = options.primitives.split(',').map((p) => p.trim());
+    const raw = options.primitives.split(',').map((p) => p.trim()).filter(Boolean);
     const invalid = raw.filter((p) => !ALL_PRIMITIVES.includes(p as Primitive));
     if (invalid.length > 0) {
-      console.log(chalk.yellow(`Warning: unknown primitives ignored: ${invalid.join(', ')}`));
+      console.log(chalk.red(`\nUnknown primitives: ${invalid.join(', ')}`));
       console.log(chalk.gray(`Valid primitives: ${ALL_PRIMITIVES.join(', ')}\n`));
+      process.exit(1);
     }
-    parsedPrimitives = raw.filter((p): p is Primitive => ALL_PRIMITIVES.includes(p as Primitive));
+    parsedPrimitives = raw as Primitive[];
   } else {
     questions.push({
       type: 'checkbox',

@@ -5,13 +5,13 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
-import { execFileSync, execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { join } from 'path';
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { randomUUID } from 'crypto';
 import type { Primitive } from './types.js';
 
-// SECURITY: This URL is passed to `curl | sh`. It MUST remain a compile-time
-// constant and never be derived from user input.
 const BEDROCK_INSTALL_URL =
   'https://raw.githubusercontent.com/XRPL-Commons/Bedrock/main/install.sh';
 
@@ -68,19 +68,23 @@ export async function ensureBedrock(): Promise<boolean> {
     return false;
   }
 
-  const spinner = ora('Installing Bedrock CLI...').start();
+  const spinner = ora('Downloading Bedrock installer...').start();
+  const tmpScript = join(tmpdir(), `bedrock-install-${randomUUID()}.sh`);
   try {
-    spinner.stop();
-    execSync(`curl -sSfL ${BEDROCK_INSTALL_URL} | sh`, {
-      stdio: 'inherit',
+    // Download to a temp file instead of piping curl | sh directly
+    execFileSync('curl', ['-sSfL', BEDROCK_INSTALL_URL, '-o', tmpScript], {
+      stdio: 'pipe',
     });
-    spinner.start('Verifying installation...');
+    spinner.succeed('Installer downloaded');
+
+    console.log(chalk.gray('Running install script (may prompt for sudo)...\n'));
+    execFileSync('sh', [tmpScript], { stdio: 'inherit' });
 
     if (isBedrockInstalled()) {
-      spinner.succeed('Bedrock CLI installed');
+      console.log(chalk.green('Bedrock CLI installed successfully'));
       return true;
     } else {
-      spinner.fail('Bedrock CLI installation failed');
+      console.log(chalk.red('Bedrock CLI installation failed'));
       return false;
     }
   } catch {
@@ -93,6 +97,9 @@ export async function ensureBedrock(): Promise<boolean> {
       )
     );
     return false;
+  } finally {
+    // Clean up temp file
+    try { rmSync(tmpScript); } catch { /* ignore */ }
   }
 }
 
