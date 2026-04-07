@@ -56,11 +56,12 @@ export function VaultInteraction() {
       showStatus(`Vault ${action} successful!`, "success");
       addEvent(`Vault ${action}`, txResult);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       setResult({
         success: false,
-        error: error.message,
+        error: message,
       });
-      showStatus(`Vault ${action} failed: ${error.message}`, "error");
+      showStatus(`Vault ${action} failed: ${message}`, "error");
       addEvent(`Vault ${action} Failed`, error);
     } finally {
       setIsSubmitting(false);

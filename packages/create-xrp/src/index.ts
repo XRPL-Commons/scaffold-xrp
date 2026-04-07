@@ -145,7 +145,7 @@ async function promptUser(
       console.log(chalk.gray(`Valid primitives: ${ALL_PRIMITIVES.join(', ')}\n`));
       process.exit(1);
     }
-    parsedPrimitives = raw as Primitive[];
+    parsedPrimitives = raw.filter((p): p is Primitive => ALL_PRIMITIVES.includes(p as Primitive));
   } else {
     questions.push({
       type: 'checkbox',

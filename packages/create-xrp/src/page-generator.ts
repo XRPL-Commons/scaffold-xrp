@@ -125,7 +125,9 @@ ${stepsJsx}
 // ---------------------------------------------------------------------------
 
 export function generateNuxtPage(primitives: Primitive[]): string {
-  // Nuxt auto-imports components, so no explicit imports needed
+  // Nuxt auto-imports components, so no explicit imports needed.
+  // Note: MPTokenCard is not included here because the Nuxt template
+  // does not ship MPToken*.vue components (Next.js only).
   const components: string[] = ['<AccountInfo />'];
 
   for (const p of primitives) {

@@ -15,7 +15,7 @@ export function EscrowInteraction() {
   const { walletManager, isConnected, addEvent, showStatus } = useWallet();
   const [action, setAction] = useState("finish");
   const [owner, setOwner] = useState("");
-  const [sequence, setSequence] = useState("");
+  const [escrowId, setEscrowId] = useState("");
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
   const [finishAfter, setFinishAfter] = useState("");
@@ -71,8 +71,8 @@ export function EscrowInteraction() {
           transaction.CancelAfter = nowRipple + parseInt(cancelAfter, 10);
         }
       } else if (action === "finish") {
-        if (!owner || !sequence) {
-          showStatus("Please provide owner and sequence", "error");
+        if (!owner || !escrowId) {
+          showStatus("Please provide owner and escrow ID", "error");
           setIsSubmitting(false);
           return;
         }
@@ -80,11 +80,11 @@ export function EscrowInteraction() {
           TransactionType: "EscrowFinish",
           Account: walletManager.account.address,
           Owner: owner,
-          OfferSequence: parseInt(sequence, 10),
+          EscrowID: escrowId,
         };
       } else {
-        if (!owner || !sequence) {
-          showStatus("Please provide owner and sequence", "error");
+        if (!owner || !escrowId) {
+          showStatus("Please provide owner and escrow ID", "error");
           setIsSubmitting(false);
           return;
         }
@@ -92,7 +92,7 @@ export function EscrowInteraction() {
           TransactionType: "EscrowCancel",
           Account: walletManager.account.address,
           Owner: owner,
-          OfferSequence: parseInt(sequence, 10),
+          EscrowID: escrowId,
         };
       }
 
@@ -107,11 +107,12 @@ export function EscrowInteraction() {
       showStatus(`Escrow ${action} successful!`, "success");
       addEvent(`Escrow ${action}`, txResult);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       setResult({
         success: false,
-        error: error.message,
+        error: message,
       });
-      showStatus(`Escrow ${action} failed: ${error.message}`, "error");
+      showStatus(`Escrow ${action} failed: ${message}`, "error");
       addEvent(`Escrow ${action} Failed`, error);
     } finally {
       setIsSubmitting(false);
@@ -211,13 +212,13 @@ export function EscrowInteraction() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="escrowSequence">Offer Sequence</Label>
+              <Label htmlFor="escrowId">Escrow ID</Label>
               <Input
-                id="escrowSequence"
+                id="escrowId"
                 type="text"
-                value={sequence}
-                onChange={(e) => setSequence(e.target.value)}
-                placeholder="e.g., 12"
+                value={escrowId}
+                onChange={(e) => setEscrowId(e.target.value)}
+                placeholder="Escrow ledger ID..."
               />
             </div>
           </>

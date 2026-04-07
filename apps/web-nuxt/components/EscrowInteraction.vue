@@ -5,7 +5,7 @@ const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const action = ref<'create' | 'finish' | 'cancel'>('finish')
 const owner = ref('')
-const sequence = ref('')
+const escrowId = ref('')
 const destination = ref('')
 const amount = ref('')
 const finishAfter = ref('')
@@ -66,8 +66,8 @@ const handleSubmit = async () => {
         transaction.CancelAfter = nowRipple + parseInt(cancelAfter.value, 10)
       }
     } else if (action.value === 'finish') {
-      if (!owner.value || !sequence.value) {
-        showStatus('Please provide owner and sequence', 'error')
+      if (!owner.value || !escrowId.value) {
+        showStatus('Please provide owner and escrow ID', 'error')
         isSubmitting.value = false
         return
       }
@@ -75,11 +75,11 @@ const handleSubmit = async () => {
         TransactionType: 'EscrowFinish',
         Account: walletManager.value.account.address,
         Owner: owner.value,
-        OfferSequence: parseInt(sequence.value, 10),
+        EscrowID: escrowId.value,
       }
     } else {
-      if (!owner.value || !sequence.value) {
-        showStatus('Please provide owner and sequence', 'error')
+      if (!owner.value || !escrowId.value) {
+        showStatus('Please provide owner and escrow ID', 'error')
         isSubmitting.value = false
         return
       }
@@ -87,7 +87,7 @@ const handleSubmit = async () => {
         TransactionType: 'EscrowCancel',
         Account: walletManager.value.account.address,
         Owner: owner.value,
-        OfferSequence: parseInt(sequence.value, 10),
+        EscrowID: escrowId.value,
       }
     }
 
@@ -217,12 +217,12 @@ const handleSubmit = async () => {
           />
         </div>
         <div class="space-y-2">
-          <label for="escrowSequence" class="text-sm font-medium leading-none">Offer Sequence</label>
+          <label for="escrowId" class="text-sm font-medium leading-none">Escrow ID</label>
           <input
-            id="escrowSequence"
-            v-model="sequence"
+            id="escrowId"
+            v-model="escrowId"
             type="text"
-            placeholder="e.g., 12"
+            placeholder="Escrow ledger ID..."
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>

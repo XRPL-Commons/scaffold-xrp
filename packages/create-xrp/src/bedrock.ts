@@ -74,11 +74,12 @@ export async function ensureBedrock(): Promise<boolean> {
     // Download to a temp file instead of piping curl | sh directly
     execFileSync('curl', ['-sSfL', BEDROCK_INSTALL_URL, '-o', tmpScript], {
       stdio: 'pipe',
+      timeout: 30_000,
     });
     spinner.succeed('Installer downloaded');
 
     console.log(chalk.gray('Running install script (may prompt for sudo)...\n'));
-    execFileSync('sh', [tmpScript], { stdio: 'inherit' });
+    execFileSync('sh', [tmpScript], { stdio: 'inherit', timeout: 120_000 });
 
     if (isBedrockInstalled()) {
       console.log(chalk.green('Bedrock CLI installed successfully'));
@@ -125,19 +126,19 @@ export function initBedrockProject(
   const spinner = ora('Initializing Bedrock project...').start();
 
   try {
-    // Init with the first primitive
+    // Init with the first primitive; rest (if any) are added via `bedrock add`
     const [first, ...rest] = primitives;
     execFileSync(
       'bedrock',
       ['init', 'bedrock', '--primitives', first],
-      { cwd: packagesDir, stdio: 'pipe' }
+      { cwd: packagesDir, stdio: 'pipe', timeout: 60_000 }
     );
 
-    // Add remaining primitives
     for (const p of rest) {
       execFileSync('bedrock', ['add', p], {
         cwd: bedrockDir,
         stdio: 'pipe',
+        timeout: 60_000,
       });
     }
 
