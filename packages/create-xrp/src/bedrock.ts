@@ -7,7 +7,7 @@ import ora from 'ora';
 import inquirer from 'inquirer';
 import { execFileSync } from 'child_process';
 import { join } from 'path';
-import { mkdirSync, existsSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, existsSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 import type { Primitive } from './types.js';

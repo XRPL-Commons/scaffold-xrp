@@ -21,9 +21,11 @@ const XRPL_VAULTS = 'npm:@willem-xrpl/xrpl@4.6.0-smartvaults.1';
  * This function owns the read-modify-write cycle for the target package.json — do not
  * call it concurrently with other package.json mutations.
  *
- * When both contract and vault/escrow are selected, we use npm aliasing:
- *   "xrpl" → contract fork (used by ContractInteraction)
- *   "xrpl-vaults" → vaults fork (used by VaultInteraction / EscrowInteraction)
+ * When both contract and vault/escrow are selected, the vaults fork is used as the
+ * primary "xrpl" package. xrpl-connect resolves "xrpl" for transaction serialization,
+ * so the primary package must understand all selected transaction types. The vaults fork
+ * (@willem-xrpl/xrpl) is the newer fork and supports contract tx types as well. The
+ * contract fork is aliased as "xrpl-contracts" for any contract-specific imports.
  */
 export function updateXrplDependencies(
   packageJsonPath: string,
@@ -35,20 +37,22 @@ export function updateXrplDependencies(
 
   // Remove existing xrpl entries
   delete deps['xrpl'];
-  delete deps['xrpl-vaults'];
+  delete deps['xrpl-contracts'];
 
   const hasContract = primitives.includes('contract');
   const hasVaultOrEscrow =
     primitives.includes('vault') || primitives.includes('escrow');
 
-  if (hasContract && hasVaultOrEscrow) {
-    // Both forks needed — alias the vaults fork
-    deps['xrpl'] = XRPL_CONTRACT;
-    deps['xrpl-vaults'] = XRPL_VAULTS;
+  if (hasVaultOrEscrow) {
+    // Vaults fork is primary — it supports vault/escrow AND contract tx types.
+    // xrpl-connect will use this for serialization.
+    deps['xrpl'] = XRPL_VAULTS;
+    if (hasContract) {
+      // Keep the contract fork available as an alias in case of contract-specific needs
+      deps['xrpl-contracts'] = XRPL_CONTRACT;
+    }
   } else if (hasContract) {
     deps['xrpl'] = XRPL_CONTRACT;
-  } else if (hasVaultOrEscrow) {
-    deps['xrpl'] = XRPL_VAULTS;
   } else {
     // No primitives — standard release
     deps['xrpl'] = XRPL_STANDARD;
