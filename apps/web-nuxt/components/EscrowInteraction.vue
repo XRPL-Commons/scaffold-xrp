@@ -1,5 +1,4 @@
 <script setup lang="ts">
-const DEFAULT_FEE = '12'
 const RIPPLE_EPOCH_OFFSET = 946684800
 
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
@@ -37,23 +36,28 @@ const handleSubmit = async () => {
         isSubmitting.value = false
         return
       }
+      const parsedAmount = Number(amount.value)
+      if (!Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+        showStatus('Amount must be a positive integer (drops)', 'error')
+        isSubmitting.value = false
+        return
+      }
       if (!finishAfter.value && !cancelAfter.value) {
         showStatus('Please provide at least one of Finish After or Cancel After', 'error')
         isSubmitting.value = false
         return
       }
-      const nowRipple = Math.floor(Date.now() / 1000) - RIPPLE_EPOCH_OFFSET
       if (finishAfter.value && cancelAfter.value && parseInt(cancelAfter.value, 10) <= parseInt(finishAfter.value, 10)) {
         showStatus('Cancel After must be greater than Finish After', 'error')
         isSubmitting.value = false
         return
       }
+      const nowRipple = Math.floor(Date.now() / 1000) - RIPPLE_EPOCH_OFFSET
       transaction = {
         TransactionType: 'EscrowCreate',
         Account: walletManager.value.account.address,
         Destination: destination.value,
-        Amount: amount.value,
-        Fee: DEFAULT_FEE,
+        Amount: String(parsedAmount),
       }
       if (finishAfter.value) {
         transaction.FinishAfter = nowRipple + parseInt(finishAfter.value, 10)
@@ -72,7 +76,6 @@ const handleSubmit = async () => {
         Account: walletManager.value.account.address,
         Owner: owner.value,
         OfferSequence: parseInt(sequence.value, 10),
-        Fee: DEFAULT_FEE,
       }
     } else {
       if (!owner.value || !sequence.value) {
@@ -85,7 +88,6 @@ const handleSubmit = async () => {
         Account: walletManager.value.account.address,
         Owner: owner.value,
         OfferSequence: parseInt(sequence.value, 10),
-        Fee: DEFAULT_FEE,
       }
     }
 
@@ -99,12 +101,13 @@ const handleSubmit = async () => {
 
     showStatus(`Escrow ${action.value} successful!`, 'success')
     addEvent(`Escrow ${action.value}`, txResult)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
     result.value = {
       success: false,
-      error: error.message,
+      error: message,
     }
-    showStatus(`Escrow ${action.value} failed: ${error.message}`, 'error')
+    showStatus(`Escrow ${action.value} failed: ${message}`, 'error')
     addEvent(`Escrow ${action.value} Failed`, error)
   } finally {
     isSubmitting.value = false

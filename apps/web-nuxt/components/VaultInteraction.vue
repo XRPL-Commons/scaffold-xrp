@@ -1,6 +1,4 @@
 <script setup lang="ts">
-const DEFAULT_FEE = '12'
-
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const vaultId = ref('')
@@ -25,6 +23,12 @@ const handleSubmit = async () => {
     return
   }
 
+  const parsedAmount = Number(amount.value)
+  if (!Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+    showStatus('Amount must be a positive integer (drops)', 'error')
+    return
+  }
+
   try {
     isSubmitting.value = true
     result.value = null
@@ -33,8 +37,7 @@ const handleSubmit = async () => {
       TransactionType: action.value === 'deposit' ? 'VaultDeposit' : 'VaultWithdraw',
       Account: walletManager.value.account.address,
       VaultID: vaultId.value,
-      Amount: amount.value,
-      Fee: DEFAULT_FEE,
+      Amount: String(parsedAmount),
     }
 
     const txResult = await walletManager.value.signAndSubmit(transaction as any)
@@ -47,12 +50,13 @@ const handleSubmit = async () => {
 
     showStatus(`Vault ${action.value} successful!`, 'success')
     addEvent(`Vault ${action.value}`, txResult)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
     result.value = {
       success: false,
-      error: error.message,
+      error: message,
     }
-    showStatus(`Vault ${action.value} failed: ${error.message}`, 'error')
+    showStatus(`Vault ${action.value} failed: ${message}`, 'error')
     addEvent(`Vault ${action.value} Failed`, error)
   } finally {
     isSubmitting.value = false

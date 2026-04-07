@@ -9,8 +9,6 @@ import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
 
-const DEFAULT_FEE = "12";
-
 export function VaultInteraction() {
   const { walletManager, isConnected, addEvent, showStatus } = useWallet();
   const [vaultId, setVaultId] = useState("");
@@ -30,6 +28,12 @@ export function VaultInteraction() {
       return;
     }
 
+    const parsedAmount = Number(amount);
+    if (!Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+      showStatus("Amount must be a positive integer (drops)", "error");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setResult(null);
@@ -38,8 +42,7 @@ export function VaultInteraction() {
         TransactionType: action === "deposit" ? "VaultDeposit" : "VaultWithdraw",
         Account: walletManager.account.address,
         VaultID: vaultId,
-        Amount: amount,
-        Fee: DEFAULT_FEE,
+        Amount: String(parsedAmount),
       };
 
       const txResult = await walletManager.signAndSubmit(transaction);

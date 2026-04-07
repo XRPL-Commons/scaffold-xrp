@@ -9,7 +9,6 @@ import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
 
-const DEFAULT_FEE = "12";
 const RIPPLE_EPOCH_OFFSET = 946684800;
 
 export function EscrowInteraction() {
@@ -42,23 +41,28 @@ export function EscrowInteraction() {
           setIsSubmitting(false);
           return;
         }
+        const parsedAmount = Number(amount);
+        if (!Number.isInteger(parsedAmount) || parsedAmount <= 0) {
+          showStatus("Amount must be a positive integer (drops)", "error");
+          setIsSubmitting(false);
+          return;
+        }
         if (!finishAfter && !cancelAfter) {
           showStatus("Please provide at least one of Finish After or Cancel After", "error");
           setIsSubmitting(false);
           return;
         }
-        const nowRipple = Math.floor(Date.now() / 1000) - RIPPLE_EPOCH_OFFSET;
         if (finishAfter && cancelAfter && parseInt(cancelAfter, 10) <= parseInt(finishAfter, 10)) {
           showStatus("Cancel After must be greater than Finish After", "error");
           setIsSubmitting(false);
           return;
         }
+        const nowRipple = Math.floor(Date.now() / 1000) - RIPPLE_EPOCH_OFFSET;
         transaction = {
           TransactionType: "EscrowCreate",
           Account: walletManager.account.address,
           Destination: destination,
-          Amount: amount,
-          Fee: DEFAULT_FEE,
+          Amount: String(parsedAmount),
         };
         if (finishAfter) {
           transaction.FinishAfter = nowRipple + parseInt(finishAfter, 10);
@@ -77,7 +81,6 @@ export function EscrowInteraction() {
           Account: walletManager.account.address,
           Owner: owner,
           OfferSequence: parseInt(sequence, 10),
-          Fee: DEFAULT_FEE,
         };
       } else {
         if (!owner || !sequence) {
@@ -90,7 +93,6 @@ export function EscrowInteraction() {
           Account: walletManager.account.address,
           Owner: owner,
           OfferSequence: parseInt(sequence, 10),
-          Fee: DEFAULT_FEE,
         };
       }
 

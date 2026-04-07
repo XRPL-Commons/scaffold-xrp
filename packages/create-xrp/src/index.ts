@@ -282,6 +282,15 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
       }
     }
 
+    // Remove MPToken components when contract is not selected (Next.js only; no .vue equivalents exist)
+    if (!primitives.includes('contract') && framework === 'nextjs') {
+      const mpComponents = ['MPTokenCard', 'MPTokenCreate', 'MPTokenTransfer', 'MPTokenAuthorize'];
+      for (const comp of mpComponents) {
+        const compPath = join(webDir, 'components', comp + '.js');
+        if (existsSync(compPath)) rmSync(compPath);
+      }
+    }
+
     // Generate page dynamically based on selected primitives
     const pagePath = framework === 'nextjs'
       ? join(webDir, 'app', 'page.js')
@@ -309,13 +318,6 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
       }
     } else {
       // ── No primitives: flatten to simple project ──
-
-      // Remove MPTokenCard-related components (only relevant with contract)
-      const mpComponents = ['MPTokenCard', 'MPTokenCreate', 'MPTokenTransfer', 'MPTokenAuthorize'];
-      for (const comp of mpComponents) {
-        const compPath = join(webDir, 'components', comp + ext);
-        if (existsSync(compPath)) rmSync(compPath);
-      }
 
       // Remove packages directory entirely
       const packagesDir = join(targetDir, 'packages');
