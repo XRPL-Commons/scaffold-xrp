@@ -20,7 +20,7 @@ const BEDROCK_INSTALL_URL =
  */
 export function isBedrockInstalled(): boolean {
   try {
-    execFileSync('bedrock', ['--version'], { stdio: 'pipe' });
+    execFileSync('bedrock', ['help'], { stdio: 'pipe' });
     return true;
   } catch {
     return false;
