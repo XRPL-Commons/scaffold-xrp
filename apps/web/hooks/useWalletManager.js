@@ -21,6 +21,7 @@ export function useWalletManager() {
           WalletConnectAdapter,
           CrossmarkAdapter,
           GemWalletAdapter,
+          OtsuAdapter,
         } = await import("xrpl-connect");
 
         const adapters = [];
@@ -38,6 +39,7 @@ export function useWalletManager() {
         // Add browser extension wallets (no config needed)
         adapters.push(new CrossmarkAdapter());
         adapters.push(new GemWalletAdapter());
+        adapters.push(new OtsuAdapter());
 
         const manager = new WalletManager({
           adapters,
