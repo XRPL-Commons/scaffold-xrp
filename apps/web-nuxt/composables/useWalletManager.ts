@@ -43,6 +43,7 @@ export function useWalletManager() {
         WalletConnectAdapter,
         CrossmarkAdapter,
         GemWalletAdapter,
+        OtsuAdapter,
       } = await import('xrpl-connect')
 
       const adapters: any[] = []
@@ -60,10 +61,13 @@ export function useWalletManager() {
       // Add browser extension wallets (no config needed)
       adapters.push(new CrossmarkAdapter())
       adapters.push(new GemWalletAdapter())
+      adapters.push(new OtsuAdapter())
+
+      const defaultNetwork = import.meta.env.VITE_DEFAULT_NETWORK || 'testnet'
 
       const manager = new WalletManager({
         adapters,
-        network: 'testnet',
+        network: defaultNetwork,
         autoConnect: true,
         logger: { level: 'info' },
       })

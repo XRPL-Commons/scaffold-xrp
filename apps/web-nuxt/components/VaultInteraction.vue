@@ -38,6 +38,8 @@ const handleSubmit = async () => {
       Account: walletManager.value.account.address,
       VaultID: vaultId.value,
       Amount: String(parsedAmount),
+      ComputationAllowance: 1000000,
+      Fee: '1000000',
     }
 
     const txResult = await walletManager.value.signAndSubmit(transaction as any)
