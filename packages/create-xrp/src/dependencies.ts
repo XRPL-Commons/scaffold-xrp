@@ -39,6 +39,8 @@ export function updateXrplDependencies(
 
   if (hasPrimitives) {
     deps['@xrpl-commons/xrpl'] = XRPL_COMMONS;
+    // Alias so xrpl-connect (which imports from "xrpl") resolves to @xrpl-commons/xrpl
+    deps['xrpl'] = `npm:@xrpl-commons/xrpl@${XRPL_COMMONS}`;
   } else {
     deps['xrpl'] = XRPL_STANDARD;
   }

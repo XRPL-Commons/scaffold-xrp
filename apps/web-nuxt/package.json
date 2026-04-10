@@ -15,7 +15,7 @@
     "events": "^3.3.0",
     "process": "^0.11.10",
     "xrpl": "^3.0.0",
-    "xrpl-connect": "^0.6.0"
+    "xrpl-connect": "^0.7.1"
   },
   "devDependencies": {
     "@nuxt/eslint": "^0.7.0",
