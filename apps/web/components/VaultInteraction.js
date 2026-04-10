@@ -43,6 +43,8 @@ export function VaultInteraction() {
         Account: walletManager.account.address,
         VaultID: vaultId,
         Amount: String(parsedAmount),
+        ComputationAllowance: 1000000,
+        Fee: "1000000",
       };
 
       const txResult = await walletManager.signAndSubmit(transaction);
