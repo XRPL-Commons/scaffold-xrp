@@ -10,12 +10,17 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import validateProjectName from 'validate-npm-package-name';
 
-import type { Answers } from './types.js';
+import type { Answers, Primitive } from './types.js';
 import { CliError } from './errors.js';
 import { installModules, initScaffoldConfig } from './modules.js';
 import { addCommand } from './commands/add.js';
 import { listCommand } from './commands/list.js';
 import { removeCommand } from './commands/remove.js';
+import { ensureBedrock, initBedrockProject } from './bedrock.js';
+import { generateNextJsPage, generateNuxtPage } from './page-generator.js';
+import { updateXrplDependencies } from './dependencies.js';
+
+const ALL_PRIMITIVES: Primitive[] = ['contract', 'vault', 'escrow'];
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,7 +40,8 @@ async function main() {
     .option('-m, --modules <modules>', 'Comma-separated list of modules to install')
     .option('--framework <framework>', 'Framework to use (nextjs or nuxt)')
     .option('--pm <packageManager>', 'Package manager to use (pnpm, npm, or yarn)')
-    .action(async (projectName?: string, options?: { modules?: string; framework?: string; pm?: string }) => {
+    .option('-p, --primitives <primitives>', 'Comma-separated primitives (contract,vault,escrow)')
+    .action(async (projectName?: string, options?: { modules?: string; framework?: string; pm?: string; primitives?: string }) => {
       // If no project name and no subcommand, show welcome and prompt
       if (!projectName && !options?.modules) {
         console.log(chalk.cyan.bold('\nWelcome to Scaffold-XRP!\n'));
@@ -78,7 +84,7 @@ async function main() {
 
 async function promptUser(
   providedName?: string,
-  options?: { framework?: string; pm?: string }
+  options?: { framework?: string; pm?: string; primitives?: string }
 ): Promise<Answers> {
   const questions = [];
 
@@ -129,13 +135,29 @@ async function promptUser(
     });
   }
 
-  // Smart contract support
-  questions.push({
-    type: 'confirm',
-    name: 'smartContract',
-    message: 'Do you want to include smart contract support?',
-    default: true,
-  });
+  // Primitives selection (unless provided via CLI flag)
+  let parsedPrimitives: Primitive[] | undefined;
+  if (options?.primitives) {
+    const raw = options.primitives.split(',').map((p) => p.trim()).filter(Boolean);
+    const invalid = raw.filter((p) => !ALL_PRIMITIVES.includes(p as Primitive));
+    if (invalid.length > 0) {
+      console.log(chalk.red(`\nUnknown primitives: ${invalid.join(', ')}`));
+      console.log(chalk.gray(`Valid primitives: ${ALL_PRIMITIVES.join(', ')}\n`));
+      process.exit(1);
+    }
+    parsedPrimitives = raw.filter((p): p is Primitive => ALL_PRIMITIVES.includes(p as Primitive));
+  } else {
+    questions.push({
+      type: 'checkbox',
+      name: 'primitives',
+      message: 'Which XRPL primitives do you want to include?',
+      choices: [
+        { name: 'Smart Contract  — programmable on-chain logic', value: 'contract' },
+        { name: 'Smart Vault     — programmable deposit/withdraw', value: 'vault' },
+        { name: 'Smart Escrow    — conditional fund release', value: 'escrow' },
+      ],
+    });
+  }
 
   // Package manager selection
   if (options?.pm && ['pnpm', 'npm', 'yarn'].includes(options.pm)) {
@@ -159,16 +181,20 @@ async function promptUser(
   return {
     projectName: providedName || answers.projectName as string,
     framework: (options?.framework as 'nextjs' | 'nuxt') || answers.framework as 'nextjs' | 'nuxt',
-    smartContract: answers.smartContract as boolean,
+    primitives: parsedPrimitives || (answers.primitives as Primitive[]) || [],
     packageManager: (options?.pm as 'pnpm' | 'npm' | 'yarn') || answers.packageManager as 'pnpm' | 'npm' | 'yarn',
   };
 }
 
 async function scaffoldProject(answers: Answers, modulesArg?: string) {
-  const { projectName, framework, smartContract, packageManager } = answers;
+  const { projectName, framework, primitives, packageManager } = answers;
   const targetDir = join(process.cwd(), projectName);
+  const hasPrimitives = primitives.length > 0;
 
   console.log(chalk.cyan(`\nCreating project in ${chalk.bold(targetDir)}\n`));
+  if (hasPrimitives) {
+    console.log(chalk.gray(`Primitives: ${primitives.join(', ')}\n`));
+  }
 
   // Clone the template
   const cloneSpinner = ora('Cloning template...').start();
@@ -185,7 +211,7 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
     process.exit(1);
   }
 
-  // Clean up
+  // Clean up and set up project structure
   const cleanSpinner = ora('Setting up project...').start();
   try {
     // Remove .git directory
@@ -203,22 +229,18 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
     // Remove non-selected framework and rename if needed
     const appsDir = join(targetDir, 'apps');
     if (framework === 'nextjs') {
-      // Remove Nuxt app
       const nuxtDir = join(appsDir, 'web-nuxt');
       if (existsSync(nuxtDir)) {
         rmSync(nuxtDir, { recursive: true, force: true });
       }
     } else {
-      // Remove Next.js app
       const nextDir = join(appsDir, 'web');
       if (existsSync(nextDir)) {
         rmSync(nextDir, { recursive: true, force: true });
       }
-      // Rename Nuxt app to 'web'
       const nuxtDir = join(appsDir, 'web-nuxt');
       if (existsSync(nuxtDir)) {
         renameSync(nuxtDir, join(appsDir, 'web'));
-        // Update the web app's package.json name from 'web-nuxt' to 'web'
         const webPackageJsonPath = join(appsDir, 'web', 'package.json');
         if (existsSync(webPackageJsonPath)) {
           const webPackageJson = JSON.parse(readFileSync(webPackageJsonPath, 'utf-8'));
@@ -230,21 +252,62 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
 
     const webDir = join(appsDir, 'web');
 
-    if (smartContract) {
-      // With smart contracts: keep monorepo structure, clean up variant files
-      const variantFiles = [
-        framework === 'nextjs'
-          ? join(webDir, 'app', 'page-without-sc.js')
-          : join(webDir, 'pages', 'index-without-sc.vue'),
-        join(targetDir, 'README-without-sc.md'),
-      ];
-      if (framework === 'nuxt') {
-        variantFiles.push(join(webDir, 'nuxt.config-without-sc.ts'));
+    // Remove old variant files (no longer needed — pages are generated dynamically)
+    const variantFiles = [
+      join(webDir, 'app', 'page-without-sc.js'),
+      join(webDir, 'pages', 'index-without-sc.vue'),
+      join(webDir, 'nuxt.config-without-sc.ts'),
+      join(targetDir, 'README-without-sc.md'),
+    ];
+    for (const file of variantFiles) {
+      if (existsSync(file)) rmSync(file);
+    }
+
+    // Remove the static bedrock package (will be recreated via bedrock init)
+    const staticBedrockDir = join(targetDir, 'packages', 'bedrock');
+    if (existsSync(staticBedrockDir)) {
+      rmSync(staticBedrockDir, { recursive: true, force: true });
+    }
+
+    // Remove interaction components for primitives NOT selected
+    const componentMap: Record<Primitive, string> = {
+      contract: 'ContractInteraction',
+      vault: 'VaultInteraction',
+      escrow: 'EscrowInteraction',
+    };
+    const ext = framework === 'nextjs' ? '.js' : '.vue';
+    for (const [prim, comp] of Object.entries(componentMap)) {
+      if (!primitives.includes(prim as Primitive)) {
+        const compPath = join(webDir, 'components', comp + ext);
+        if (existsSync(compPath)) rmSync(compPath);
       }
-      for (const file of variantFiles) {
-        if (existsSync(file)) {
-          rmSync(file);
-        }
+    }
+
+    // Remove MPToken components when contract is not selected (Next.js only; no .vue equivalents exist)
+    if (!primitives.includes('contract') && framework === 'nextjs') {
+      const mpComponents = ['MPTokenCard', 'MPTokenCreate', 'MPTokenTransfer', 'MPTokenAuthorize'];
+      for (const comp of mpComponents) {
+        const compPath = join(webDir, 'components', comp + '.js');
+        if (existsSync(compPath)) rmSync(compPath);
+      }
+    }
+
+    // Generate page dynamically based on selected primitives
+    const pagePath = framework === 'nextjs'
+      ? join(webDir, 'app', 'page.js')
+      : join(webDir, 'pages', 'index.vue');
+    const pageContent = framework === 'nextjs'
+      ? generateNextJsPage(primitives)
+      : generateNuxtPage(primitives);
+    writeFileSync(pagePath, pageContent);
+
+    if (hasPrimitives) {
+      // ── With primitives: keep monorepo structure ──
+
+      // Update xrpl.js dependencies for the selected primitives
+      const webPkgPath = join(webDir, 'package.json');
+      if (existsSync(webPkgPath)) {
+        updateXrplDependencies(webPkgPath, primitives);
       }
 
       // Update root package.json name
@@ -255,78 +318,31 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
         writeFileSync(packageJsonPath, JSON.stringify(rootPkg, null, 2) + '\n');
       }
     } else {
-      // Without smart contracts: flatten to a simple project
+      // ── No primitives: flatten to simple project ──
 
-      // 1. Swap page variant files
-      if (framework === 'nextjs') {
-        const pagePath = join(webDir, 'app', 'page.js');
-        const noScPagePath = join(webDir, 'app', 'page-without-sc.js');
-        if (existsSync(noScPagePath)) {
-          rmSync(pagePath);
-          renameSync(noScPagePath, pagePath);
-        }
-      } else {
-        const indexPath = join(webDir, 'pages', 'index.vue');
-        const noScIndexPath = join(webDir, 'pages', 'index-without-sc.vue');
-        if (existsSync(noScIndexPath)) {
-          rmSync(indexPath);
-          renameSync(noScIndexPath, indexPath);
-        }
-        // Swap nuxt.config variant
-        const nuxtConfigPath = join(webDir, 'nuxt.config.ts');
-        const noScNuxtConfigPath = join(webDir, 'nuxt.config-without-sc.ts');
-        if (existsSync(noScNuxtConfigPath)) {
-          rmSync(nuxtConfigPath);
-          renameSync(noScNuxtConfigPath, nuxtConfigPath);
-        }
-      }
-
-      // 2. Remove ContractInteraction component
-      const contractComponentName = framework === 'nextjs'
-        ? 'ContractInteraction.js'
-        : 'ContractInteraction.vue';
-      const contractComponent = join(webDir, 'components', contractComponentName);
-      if (existsSync(contractComponent)) {
-        rmSync(contractComponent);
-      }
-
-      // 3. Remove packages directory (bedrock)
+      // Remove packages directory entirely
       const packagesDir = join(targetDir, 'packages');
       if (existsSync(packagesDir)) {
         rmSync(packagesDir, { recursive: true, force: true });
       }
 
-      // 4. Swap README and remove monorepo-specific docs
-      const readmeNoScPath = join(targetDir, 'README-without-sc.md');
-      const readmePath = join(targetDir, 'README.md');
-      if (existsSync(readmeNoScPath)) {
-        rmSync(readmePath);
-        renameSync(readmeNoScPath, readmePath);
-      }
+      // Remove monorepo-specific docs
       const monorepoDocFiles = ['QUICKSTART.md', 'CONTRIBUTING.md'];
       for (const file of monorepoDocFiles) {
         const filePath = join(targetDir, file);
-        if (existsSync(filePath)) {
-          rmSync(filePath);
-        }
+        if (existsSync(filePath)) rmSync(filePath);
       }
 
-      // 5. Flatten: move web app contents to project root
+      // Flatten: remove monorepo config and move web app to root
       const monorepoConfigFiles = ['pnpm-workspace.yaml', 'turbo.json'];
       for (const file of monorepoConfigFiles) {
         const filePath = join(targetDir, file);
-        if (existsSync(filePath)) {
-          rmSync(filePath);
-        }
+        if (existsSync(filePath)) rmSync(filePath);
       }
 
-      // Remove root package.json (will be replaced by web app's)
       const rootPkgPath = join(targetDir, 'package.json');
-      if (existsSync(rootPkgPath)) {
-        rmSync(rootPkgPath);
-      }
+      if (existsSync(rootPkgPath)) rmSync(rootPkgPath);
 
-      // Copy all web app contents to project root
       const webContents = readdirSync(webDir);
       for (const item of webContents) {
         const src = join(webDir, item);
@@ -334,15 +350,15 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
         cpSync(src, dest, { recursive: true });
       }
 
-      // Remove apps directory
       rmSync(appsDir, { recursive: true, force: true });
 
-      // Update the web app's package.json (now at root) with project name
+      // Update package.json name and xrpl dependency
       const newPkgPath = join(targetDir, 'package.json');
       if (existsSync(newPkgPath)) {
         const webPkg = JSON.parse(readFileSync(newPkgPath, 'utf-8'));
         webPkg.name = projectName;
         writeFileSync(newPkgPath, JSON.stringify(webPkg, null, 2) + '\n');
+        updateXrplDependencies(newPkgPath, []);
       }
     }
 
@@ -352,8 +368,19 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
     console.log(chalk.yellow('\nWarning: Some setup steps failed\n'));
   }
 
+  // Initialize Bedrock project if primitives selected
+  if (hasPrimitives) {
+    const bedrockReady = await ensureBedrock();
+    if (bedrockReady) {
+      const initialized = initBedrockProject(targetDir, primitives);
+      if (!initialized) {
+        console.log(chalk.yellow('\nBedrock project setup failed — you can retry manually after install.\n'));
+      }
+    }
+  }
+
   // Initialize scaffold config
-  initScaffoldConfig(targetDir, framework);
+  initScaffoldConfig(targetDir, framework, primitives);
 
   // Install dependencies
   const installSpinner = ora(`Installing dependencies with ${packageManager}...`).start();
@@ -402,6 +429,23 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
   const devCommand = packageManager === 'npm' ? 'npm run' : packageManager;
   console.log(chalk.white(`  ${devCommand} dev\n`));
   console.log(chalk.gray('Your app will be running at http://localhost:3000\n'));
+
+  if (hasPrimitives) {
+    console.log(chalk.cyan('Bedrock commands:\n'));
+    if (primitives.includes('contract')) {
+      console.log(chalk.white('  bedrock build --type contract   # Build contract'));
+      console.log(chalk.white('  bedrock deploy --network local  # Deploy contract'));
+    }
+    if (primitives.includes('vault')) {
+      console.log(chalk.white('  bedrock build --type vault      # Build vault WASM'));
+      console.log(chalk.white('  bedrock vault deploy --asset XRP --wallet <seed> --network local'));
+    }
+    if (primitives.includes('escrow')) {
+      console.log(chalk.white('  bedrock build --type escrow     # Build escrow WASM'));
+      console.log(chalk.white('  bedrock escrow deploy --destination <addr> --amount <drops> --wallet <seed> --network local'));
+    }
+    console.log('');
+  }
 
   // Module management info
   console.log(chalk.cyan('Module management:\n'));

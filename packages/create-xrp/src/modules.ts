@@ -20,6 +20,7 @@ import { tmpdir } from 'os';
 import { randomUUID } from 'crypto';
 import type {
   ModuleConfig,
+  Primitive,
   Registry,
   ScaffoldConfig,
   InstalledModule,
@@ -113,10 +114,12 @@ export function writeScaffoldConfig(
  */
 export function initScaffoldConfig(
   projectDir: string,
-  framework: 'nextjs' | 'nuxt'
+  framework: 'nextjs' | 'nuxt',
+  primitives: Primitive[] = []
 ): ScaffoldConfig {
   const config: ScaffoldConfig = {
     framework,
+    primitives,
     installedModules: {},
   };
   writeScaffoldConfig(projectDir, config);
@@ -587,10 +590,12 @@ export function isScaffoldXrpProject(dir: string): boolean {
     return true;
   }
 
-  // Check for typical scaffold-xrp structure
+  // Check for typical scaffold-xrp structure (monorepo with primitives)
   const hasAppsWeb = existsSync(join(dir, 'apps', 'web'));
-  const hasPackagesBedrock = existsSync(join(dir, 'packages', 'bedrock'));
   const hasTurboJson = existsSync(join(dir, 'turbo.json'));
+  const hasXrplConnect =
+    existsSync(join(dir, 'apps', 'web', 'components', 'providers', 'WalletProvider.js')) ||
+    existsSync(join(dir, 'apps', 'web', 'composables', 'useWallet.ts'));
 
-  return hasAppsWeb && hasPackagesBedrock && hasTurboJson;
+  return hasAppsWeb && hasTurboJson && hasXrplConnect;
 }

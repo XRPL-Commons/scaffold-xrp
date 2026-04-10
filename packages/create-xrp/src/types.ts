@@ -2,10 +2,12 @@
  * Type definitions for the scaffold-xrp CLI and module system
  */
 
+export type Primitive = 'contract' | 'vault' | 'escrow';
+
 export interface Answers {
   projectName: string;
   framework: 'nextjs' | 'nuxt';
-  smartContract: boolean;
+  primitives: Primitive[];
   packageManager: 'pnpm' | 'npm' | 'yarn';
   modules?: string[];
 }
@@ -55,6 +57,7 @@ export interface InstalledModule {
 
 export interface ScaffoldConfig {
   framework: 'nextjs' | 'nuxt';
+  primitives: Primitive[];
   installedModules: Record<string, InstalledModule>;
 }
 
