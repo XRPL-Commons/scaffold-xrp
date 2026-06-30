@@ -4,6 +4,7 @@
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import { join, relative } from 'path';
 import {
   installModule,
   fetchRegistry,
@@ -12,6 +13,7 @@ import {
   isScaffoldXrpProject,
   readScaffoldConfig,
   initScaffoldConfig,
+  resolveWebDir,
 } from '../modules.js';
 import { CliError } from '../errors.js';
 
@@ -61,7 +63,7 @@ export async function addCommand(moduleSource?: string): Promise<void> {
       value: '__custom__',
     });
 
-    const answers = await inquirer.prompt([
+    const answers = await inquirer.prompt<{ module: string }>([
       {
         type: 'list',
         name: 'module',
@@ -71,7 +73,7 @@ export async function addCommand(moduleSource?: string): Promise<void> {
     ]);
 
     if (answers.module === '__custom__') {
-      const urlAnswer = await inquirer.prompt([
+      const urlAnswer = await inquirer.prompt<{ url: string }>([
         {
           type: 'input',
           name: 'url',
@@ -123,7 +125,8 @@ export async function addCommand(moduleSource?: string): Promise<void> {
     throw new CliError(`Failed to install module: ${result.error}`);
   }
 
+  const moduleLocation = relative(projectDir, join(resolveWebDir(projectDir), 'modules', result.moduleName ?? '')) || '.';
   console.log(chalk.green.bold('\nModule installed successfully!\n'));
-  console.log(chalk.gray(`Module files are located in: apps/web/modules/${result.moduleName}/`));
+  console.log(chalk.gray(`Module files are located in: ${moduleLocation}/`));
   console.log(chalk.gray('You can now import and use the module in your application.\n'));
 }

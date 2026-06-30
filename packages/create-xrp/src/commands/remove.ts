@@ -36,7 +36,7 @@ export async function removeCommand(moduleName?: string): Promise<void> {
       value: name,
     }));
 
-    const answers = await inquirer.prompt([
+    const answers = await inquirer.prompt<{ module: string }>([
       {
         type: 'list',
         name: 'module',

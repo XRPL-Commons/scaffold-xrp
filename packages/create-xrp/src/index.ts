@@ -135,17 +135,25 @@ async function promptUser(
     });
   }
 
-  // Primitives selection (unless provided via CLI flag)
+  // Primitives selection (unless provided via CLI flag).
+  // The flag is authoritative when *present* — including an empty value or the
+  // literal "none", which both mean "scaffold without primitives". Only fall
+  // back to the interactive prompt when the flag is entirely absent.
   let parsedPrimitives: Primitive[] | undefined;
-  if (options?.primitives) {
-    const raw = options.primitives.split(',').map((p) => p.trim()).filter(Boolean);
-    const invalid = raw.filter((p) => !ALL_PRIMITIVES.includes(p as Primitive));
-    if (invalid.length > 0) {
-      console.log(chalk.red(`\nUnknown primitives: ${invalid.join(', ')}`));
-      console.log(chalk.gray(`Valid primitives: ${ALL_PRIMITIVES.join(', ')}\n`));
-      process.exit(1);
+  if (options?.primitives !== undefined) {
+    const normalized = options.primitives.trim().toLowerCase();
+    if (normalized === '' || normalized === 'none') {
+      parsedPrimitives = [];
+    } else {
+      const raw = options.primitives.split(',').map((p) => p.trim()).filter(Boolean);
+      const invalid = raw.filter((p) => !ALL_PRIMITIVES.includes(p as Primitive));
+      if (invalid.length > 0) {
+        console.log(chalk.red(`\nUnknown primitives: ${invalid.join(', ')}`));
+        console.log(chalk.gray(`Valid primitives: ${ALL_PRIMITIVES.join(', ')} (or "none")\n`));
+        process.exit(1);
+      }
+      parsedPrimitives = raw.filter((p): p is Primitive => ALL_PRIMITIVES.includes(p as Primitive));
     }
-    parsedPrimitives = raw.filter((p): p is Primitive => ALL_PRIMITIVES.includes(p as Primitive));
   } else {
     questions.push({
       type: 'checkbox',
@@ -174,6 +182,16 @@ async function promptUser(
       ],
       default: 'pnpm',
     });
+  }
+
+  // Interactive prompts require a TTY. In non-interactive contexts (CI, piped
+  // stdin) fail with a clear message instead of crashing with ERR_USE_AFTER_CLOSE.
+  if (questions.length > 0 && !process.stdin.isTTY) {
+    throw new CliError(
+      'Missing options and no interactive terminal available.\n' +
+      'Provide every option as a flag, e.g.:\n' +
+      '  create-xrp my-app --framework nextjs --primitives "" --pm pnpm'
+    );
   }
 
   const answers = await inquirer.prompt<Partial<Answers>>(questions);
@@ -224,6 +242,12 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
     const cliDir = join(targetDir, 'packages', 'create-xrp');
     if (existsSync(cliDir)) {
       rmSync(cliDir, { recursive: true, force: true });
+    }
+
+    // Remove repo-only docs (module-authoring templates) — not needed in a generated app
+    const docsDir = join(targetDir, 'docs');
+    if (existsSync(docsDir)) {
+      rmSync(docsDir, { recursive: true, force: true });
     }
 
     // Remove non-selected framework and rename if needed

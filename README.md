@@ -26,7 +26,7 @@ A Next.js-based development stack for building decentralized applications on XRP
 
 ```
 # Clone the repository
-git clone https://github.com/yourusername/scaffold-xrp.git
+git clone https://github.com/XRPL-Commons/scaffold-xrp.git
 cd scaffold-xrp
 
 # Install dependencies
@@ -107,7 +107,7 @@ cargo build --target wasm32-unknown-unknown --release
 
 The compiled WASM file will be at:
 ```
-target/wasm32-unknown-unknown/release/counter.wasm
+target/wasm32-unknown-unknown/release/bedrock.wasm
 ```
 
 See [packages/bedrock/README.md](packages/bedrock/README.md) for more details.

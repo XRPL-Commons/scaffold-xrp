@@ -137,7 +137,7 @@ export function detectFramework(projectDir: string): 'nextjs' | 'nuxt' | null {
   }
 
   // Check for framework-specific files
-  const webDir = join(projectDir, 'apps', 'web');
+  const webDir = resolveWebDir(projectDir);
   if (existsSync(join(webDir, 'nuxt.config.ts'))) {
     return 'nuxt';
   }
@@ -161,6 +161,18 @@ export function detectPackageManager(
     return 'yarn';
   }
   return 'npm';
+}
+
+/**
+ * Resolve the directory that holds the web app.
+ *
+ * Projects scaffolded with primitives keep the monorepo layout (apps/web),
+ * while projects scaffolded without primitives are flattened to the project
+ * root. Module commands must target whichever layout is present.
+ */
+export function resolveWebDir(projectDir: string): string {
+  const monorepoWebDir = join(projectDir, 'apps', 'web');
+  return existsSync(monorepoWebDir) ? monorepoWebDir : projectDir;
 }
 
 /**
@@ -232,7 +244,7 @@ function copyModuleFiles(
   moduleConfig: ModuleConfig,
   framework: 'nextjs' | 'nuxt'
 ): void {
-  const webDir = join(projectDir, 'apps', 'web');
+  const webDir = resolveWebDir(projectDir);
   const modulesDir = join(webDir, 'modules', moduleConfig.name);
   const bedrockModulesDir = join(
     projectDir,
@@ -337,7 +349,7 @@ function installModuleDependencies(
 
   try {
     const subcommand = packageManager === 'npm' ? 'install' : 'add';
-    const webDir = join(projectDir, 'apps', 'web');
+    const webDir = resolveWebDir(projectDir);
     execFileSync(packageManager, [subcommand, ...dependencies], { cwd: webDir, stdio: 'pipe' });
     return true;
   } catch (error) {
@@ -550,7 +562,7 @@ export function removeModule(
 
   try {
     // Remove module directory from web app
-    const webModuleDir = join(projectDir, 'apps', 'web', 'modules', moduleName);
+    const webModuleDir = join(resolveWebDir(projectDir), 'modules', moduleName);
     if (existsSync(webModuleDir)) {
       rmSync(webModuleDir, { recursive: true, force: true });
     }
