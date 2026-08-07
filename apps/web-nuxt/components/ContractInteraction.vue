@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// XLS-101d Smart Contract interaction component.
+// Reference: https://github.com/XRPLF/XRPL-Standards/discussions/271
+
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const contractAddress = ref('')
@@ -40,11 +43,12 @@ const handleCallContract = async () => {
     isCalling.value = true
     callResult.value = null
 
+    // Build XLS-101 ContractCall transaction
     const transaction: Record<string, unknown> = {
       TransactionType: 'ContractCall',
       Account: walletManager.value.account.address,
       ContractAccount: contractAddress.value,
-      Fee: '1000000', // 1 XRP in drops
+      Fee: '1000000',
       FunctionName: stringToHex(functionName.value),
       ComputationAllowance: '1000000',
     }
@@ -114,7 +118,7 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
           id="functionName"
           v-model="functionName"
           type="text"
-          placeholder="e.g., increment, get_value"
+          placeholder="e.g., increment, get_count"
           class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <p v-if="functionName" class="text-xs text-muted-foreground">
@@ -139,11 +143,14 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
       </div>
 
       <div class="rounded-md border p-3 text-sm">
-        <p class="font-medium mb-2">Counter Contract Functions</p>
+        <p class="font-medium mb-2">Counter Contract Functions (XLS-101)</p>
         <ul class="text-muted-foreground space-y-1 text-xs">
+          <li>get_count - Get current counter value</li>
           <li>increment - Increase counter by 1</li>
           <li>decrement - Decrease counter by 1</li>
-          <li>get_value - Get current counter value</li>
+          <li>set_count - Set counter to a specific value</li>
+          <li>add - Add an amount to counter</li>
+          <li>subtract - Subtract an amount from counter</li>
           <li>reset - Reset counter to 0</li>
         </ul>
       </div>

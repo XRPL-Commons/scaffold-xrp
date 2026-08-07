@@ -44,7 +44,7 @@ You'll receive 1000 XRP on AlphaNet for testing!
 
 ### 3. Deploy Your First Contract
 
-The project includes a sample counter contract in `packages/bedrock/`.
+The project includes a sample counter contract in `packages/bedrock/`, built according to the [XLS-101d specification](https://github.com/XRPLF/XRPL-Standards/discussions/271) for XRPL smart contracts.
 
 #### Build the Contract
 
@@ -55,12 +55,12 @@ rustup target add wasm32-unknown-unknown
 
 # Build the counter contract
 cd packages/bedrock
-cargo build --target wasm32-unknown-unknown --release
+bedrock build --release
 ```
 
 The compiled WASM file will be at:
 ```
-packages/bedrock/target/wasm32-unknown-unknown/release/counter.wasm
+packages/bedrock/contract/target/wasm32-unknown-unknown/release/bedrock.wasm
 ```
 
 #### Deploy via UI
@@ -74,15 +74,22 @@ packages/bedrock/target/wasm32-unknown-unknown/release/counter.wasm
 
 ### 4. Interact with Your Contract
 
+The counter contract exposes functions via XLS-101 ContractCall transactions:
+
 1. Go to the "Interact with Contract" section
 2. Paste your contract address
 3. Click "Load Counter Example" or enter a function name:
+   - `get_count` - Get current counter value
    - `increment` - Increase counter by 1
    - `decrement` - Decrease counter by 1
-   - `get_value` - Get current value
+   - `set_count` - Set counter to a specific value (pass value as argument)
+   - `add` - Add an amount to counter (pass amount as argument)
+   - `subtract` - Subtract an amount from counter (pass amount as argument)
    - `reset` - Reset to 0
 4. Click "Call Contract Function"
 5. Approve the transaction in your wallet
+
+See [docs/xls-101-reference.md](docs/xls-101-reference.md) for full specification details.
 
 ### 5. Explore the Debug Panel
 
@@ -108,6 +115,7 @@ Try executing custom XRPL commands:
 ## Need Help?
 
 - Check the [XRPL Documentation](https://xrpl.org/)
+- Read the [XLS-101 Reference](docs/xls-101-reference.md)
 - Visit the [Bedrock GitHub](https://github.com/XRPL-Commons/Bedrock)
 - Review the [Contributing Guide](CONTRIBUTING.md)
 
