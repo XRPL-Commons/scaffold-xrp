@@ -1,15 +1,25 @@
 <script setup lang="ts">
 const RIPPLE_EPOCH_OFFSET = 946684800
 
+// Convert an uploaded .wasm file to the uppercase hex string XRPL expects for FinishFunction.
+async function wasmFileToHex(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  let hex = ''
+  for (const b of bytes) hex += b.toString(16).padStart(2, '0')
+  return hex.toUpperCase()
+}
+
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const action = ref<'create' | 'finish' | 'cancel'>('finish')
 const owner = ref('')
-const escrowId = ref('')
+const offerSequence = ref('')
 const destination = ref('')
 const amount = ref('')
 const finishAfter = ref('')
 const cancelAfter = ref('')
+const finishFunction = ref('')
+const computationAllowance = ref('1000000')
 const isSubmitting = ref(false)
 const result = ref<{
   success: boolean
@@ -42,8 +52,15 @@ const handleSubmit = async () => {
         isSubmitting.value = false
         return
       }
+      const finishFn = finishFunction.value.trim().toUpperCase()
+      // XRPL requires a time bound on every escrow — even a smart (WASM) one.
       if (!finishAfter.value && !cancelAfter.value) {
-        showStatus('Please provide at least one of Finish After or Cancel After', 'error')
+        showStatus('XRPL requires Finish After or Cancel After (even for a smart escrow)', 'error')
+        isSubmitting.value = false
+        return
+      }
+      if (finishFn && !/^[0-9A-F]+$/.test(finishFn)) {
+        showStatus('Finish Function must be hex (the compiled escrow WASM)', 'error')
         isSubmitting.value = false
         return
       }
@@ -59,6 +76,10 @@ const handleSubmit = async () => {
         Destination: destination.value,
         Amount: String(parsedAmount),
       }
+      if (finishFn) {
+        // Smart escrow: the WASM finish() condition is evaluated on EscrowFinish.
+        transaction.FinishFunction = finishFn
+      }
       if (finishAfter.value) {
         transaction.FinishAfter = nowRipple + parseInt(finishAfter.value, 10)
       }
@@ -66,8 +87,9 @@ const handleSubmit = async () => {
         transaction.CancelAfter = nowRipple + parseInt(cancelAfter.value, 10)
       }
     } else if (action.value === 'finish') {
-      if (!owner.value || !escrowId.value) {
-        showStatus('Please provide owner and escrow ID', 'error')
+      const seq = parseInt(offerSequence.value, 10)
+      if (!owner.value || !Number.isInteger(seq) || seq <= 0) {
+        showStatus('Please provide owner and the escrow sequence (OfferSequence)', 'error')
         isSubmitting.value = false
         return
       }
@@ -75,11 +97,20 @@ const handleSubmit = async () => {
         TransactionType: 'EscrowFinish',
         Account: walletManager.value.account.address,
         Owner: owner.value,
-        EscrowID: escrowId.value,
+        OfferSequence: seq,
+      }
+      // Smart escrow: supply gas for the WASM finish(). The fee must cover the
+      // WASM gas — a flat 1 XRP is rejected with telINSUF_FEE_P. Scale the fee
+      // with the gas allowance (~10 drops/gas covered the worst case locally).
+      const allowance = parseInt(computationAllowance.value, 10)
+      if (Number.isInteger(allowance) && allowance > 0) {
+        transaction.ComputationAllowance = allowance
+        transaction.Fee = String(allowance * 10)
       }
     } else {
-      if (!owner.value || !escrowId.value) {
-        showStatus('Please provide owner and escrow ID', 'error')
+      const seq = parseInt(offerSequence.value, 10)
+      if (!owner.value || !Number.isInteger(seq) || seq <= 0) {
+        showStatus('Please provide owner and the escrow sequence (OfferSequence)', 'error')
         isSubmitting.value = false
         return
       }
@@ -87,7 +118,7 @@ const handleSubmit = async () => {
         TransactionType: 'EscrowCancel',
         Account: walletManager.value.account.address,
         Owner: owner.value,
-        EscrowID: escrowId.value,
+        OfferSequence: seq,
       }
     }
 
@@ -203,6 +234,30 @@ const handleSubmit = async () => {
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
+        <div class="space-y-2">
+          <label for="escrowFinishFunctionFile" class="text-sm font-medium leading-none">Finish Function — smart escrow WASM (optional)</label>
+          <input
+            id="escrowFinishFunctionFile"
+            type="file"
+            accept=".wasm"
+            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            @change="async (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0]
+              if (file) finishFunction = await wasmFileToHex(file)
+            }"
+          />
+          <input
+            id="escrowFinishFunction"
+            v-model="finishFunction"
+            type="text"
+            placeholder="WASM hex, or pick the .wasm built by bedrock"
+            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+          <p class="text-xs text-muted-foreground">
+            Leave empty for a plain time-based escrow. Provide the WASM built by
+            <span class="font-mono">bedrock build --type escrow</span> for a smart escrow.
+          </p>
+        </div>
       </template>
 
       <template v-if="action === 'finish' || action === 'cancel'">
@@ -217,14 +272,27 @@ const handleSubmit = async () => {
           />
         </div>
         <div class="space-y-2">
-          <label for="escrowId" class="text-sm font-medium leading-none">Escrow ID</label>
+          <label for="escrowSequence" class="text-sm font-medium leading-none">Escrow Sequence (OfferSequence)</label>
           <input
-            id="escrowId"
-            v-model="escrowId"
+            id="escrowSequence"
+            v-model="offerSequence"
             type="text"
-            placeholder="Escrow ledger ID..."
+            placeholder="Sequence of the EscrowCreate transaction"
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
+        </div>
+        <div v-if="action === 'finish'" class="space-y-2">
+          <label for="escrowComputationAllowance" class="text-sm font-medium leading-none">Computation Allowance (smart escrow)</label>
+          <input
+            id="escrowComputationAllowance"
+            v-model="computationAllowance"
+            type="text"
+            placeholder="e.g., 1000000"
+            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+          <p class="text-xs text-muted-foreground">
+            Gas for the WASM finish(). Clear this for a plain (non-smart) escrow.
+          </p>
         </div>
       </template>
 
