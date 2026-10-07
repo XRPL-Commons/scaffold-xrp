@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useWallet as useBindingWallet } from "@xrpl-commons/xrpl-connect-react";
 import { WalletConnector } from "./WalletConnector";
 import { useWallet } from "./providers/WalletProvider";
@@ -16,14 +17,13 @@ export function Header() {
       <div className="flex min-h-24 flex-wrap items-center justify-between gap-4 py-5">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground text-background">
-            <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
-              <path
-                d="m4 4 5 5a4.25 4.25 0 0 0 6 0l5-5M4 20l5-5a4.25 4.25 0 0 1 6 0l5 5"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
+            <Image
+              src="/xrpl-logo.png"
+              alt=""
+              width={28}
+              height={24}
+              className="object-contain brightness-0 invert"
+            />
           </div>
           <span className="text-lg font-semibold tracking-tight">Scaffold-XRP</span>
         </div>

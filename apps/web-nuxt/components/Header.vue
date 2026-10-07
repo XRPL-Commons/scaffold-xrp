@@ -25,14 +25,13 @@ const statusTone = computed(() => {
           aria-hidden="true"
           class="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground text-background"
         >
-          <svg viewBox="0 0 24 24" fill="none" class="h-6 w-6">
-            <path
-              d="m4 4 5 5a4.25 4.25 0 0 0 6 0l5-5M4 20l5-5a4.25 4.25 0 0 1 6 0l5 5"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-            />
-          </svg>
+          <img
+            src="/xrpl-logo.png"
+            alt=""
+            width="28"
+            height="24"
+            class="object-contain brightness-0 invert"
+          >
         </span>
         <span class="text-lg font-semibold tracking-tight">Scaffold-XRP</span>
       </NuxtLink>

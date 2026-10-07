@@ -15,3 +15,5 @@
 - Treat the starter as a clean canvas: keep one clear wallet connection entry point, move setup instructions to the README, and avoid repeating onboarding text across cards.
 
 - Show the network selector without a repeated visible “Network” label; retain its accessible name for screen readers.
+
+- Reuse the provided XRP brand asset from the faucet project instead of approximating the logo with custom SVG paths.

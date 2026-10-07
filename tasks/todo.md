@@ -67,3 +67,9 @@ Local TypeScript verification: CLI tests (8) and type check passed. Generated de
 - [x] Verify locally and rebuild the CLI for manual review; do not push or trigger CI.
 
 Clean-canvas review: removed visible network labels from both headers while retaining accessible names. Next and Nuxt lint, type checks, and production builds pass; existing Next payment tests (11) and CLI tests (8) pass. Default and all seven experimental component combinations compile as generated TSX/Vue templates. Both preview servers return HTTP 200; Next HTML confirms no repeated onboarding panel or hosted-wallet setup disclosure. No browser connection is available for interactive visual verification. Local production previews run on ports 3100 (Next) and 3101 (Nuxt); pushes and CI remain held for manual review.
+
+## XRP logo
+
+- [x] Reuse `xrpl-rlusd-faucet/public/xrpl-logo.png` in both headers, verify it is included in generated projects, and refresh the local previews.
+
+Logo verification: both framework lint/build checks passed, the CLI bundle contains byte-identical copies of the source asset, and both preview URLs serve it successfully. Changes remain local.
