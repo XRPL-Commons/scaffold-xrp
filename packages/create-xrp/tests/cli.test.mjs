@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
+import { parse as parseYaml } from 'yaml';
 
 import {
   parseFramework,
@@ -153,14 +154,22 @@ test('explicit experimental generation enables selected primitive and Bedrock se
 test('generated projects retain dependency constraints for the chosen package manager', () => {
   const cwd = createTempDirectory('create-xrp-dependency-constraints');
   const templateManifest = JSON.parse(readFileSync(join(packageDir, 'template/package.json'), 'utf8'));
+  const templatePnpmConfig = parseYaml(readFileSync(join(packageDir, 'template/pnpm-workspace.yaml'), 'utf8'));
   for (const packageManager of ['npm', 'pnpm', 'yarn']) {
     const result = runCli(cwd, [packageManager + '-app', '--framework', 'nextjs', '--pm', packageManager, '--no-experimental', '--skip-install']);
     assert.equal(result.status, 0, result.stderr || result.stdout);
     const manifest = JSON.parse(readFileSync(join(cwd, packageManager + '-app', 'package.json'), 'utf8'));
-    const constraints = packageManager === 'pnpm'
-      ? manifest.pnpm?.overrides
-      : packageManager === 'yarn' ? manifest.resolutions : manifest.overrides;
-    assert.deepEqual(constraints, templateManifest.overrides);
+    if (packageManager === 'pnpm') {
+      assert.equal(manifest.pnpm, undefined);
+      const config = parseYaml(readFileSync(join(cwd, packageManager + '-app', 'pnpm-workspace.yaml'), 'utf8'));
+      assert.equal(config.packages, undefined);
+      assert.deepEqual(config.overrides, templatePnpmConfig.overrides);
+      assert.deepEqual(config.allowBuilds, templatePnpmConfig.allowBuilds);
+      assert.equal(config.allowBuilds['unrs-resolver'], true);
+      assert.equal(config.allowBuilds.bufferutil, false);
+    } else {
+      assert.deepEqual(packageManager === 'yarn' ? manifest.resolutions : manifest.overrides, templateManifest.overrides);
+    }
   }
 });
 
@@ -198,10 +207,12 @@ test('invalid CLI flags and dependency failures return nonzero', () => {
 
   const binDir = join(cwd, 'failing-bin');
   mkdirSync(binDir);
-  writeExecutable(join(binDir, 'npm'), '#!/bin/sh\nexit 42\n');
+  writeExecutable(join(binDir, 'npm'), '#!/bin/sh\necho "INSTALL_FAILURE_ON_STDOUT"\necho "INSTALL_FAILURE_ON_STDERR" >&2\nexit 42\n');
   const installFailure = runCli(cwd, ['install-failure', '--framework', 'nextjs', '--pm', 'npm', '--no-experimental'], binDir);
   assert.notEqual(installFailure.status, 0);
   assert.match(installFailure.stderr, /Failed to install dependencies/);
+  assert.match(installFailure.stdout, /INSTALL_FAILURE_ON_STDOUT/);
+  assert.match(installFailure.stderr, /INSTALL_FAILURE_ON_STDERR/);
   assert.doesNotMatch(installFailure.stdout, /Project created successfully/);
 
   const gitBin = join(cwd, 'git-bin');

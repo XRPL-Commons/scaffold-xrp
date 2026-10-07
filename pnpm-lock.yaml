@@ -137,6 +137,9 @@ importers:
       validate-npm-package-name:
         specifier: ^5.0.0
         version: 5.0.1
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
     devDependencies:
       '@types/node':
         specifier: ^20.10.0

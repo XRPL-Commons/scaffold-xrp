@@ -9,6 +9,7 @@ import { existsSync, rmSync, readFileSync, renameSync, writeFileSync, cpSync, re
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import validateProjectName from 'validate-npm-package-name';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 import type { Answers, Primitive } from './types.js';
 import { CliError } from './errors.js';
@@ -397,11 +398,15 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
       }
 
       // Flatten: remove monorepo config and move web app to root
-      const monorepoConfigFiles = ['pnpm-workspace.yaml', 'turbo.json'];
-      for (const file of monorepoConfigFiles) {
-        const filePath = join(targetDir, file);
-        if (existsSync(filePath)) rmSync(filePath);
+      const pnpmConfigPath = join(targetDir, 'pnpm-workspace.yaml');
+      if (packageManager === 'pnpm') {
+        const pnpmConfig = parseYaml(readFileSync(pnpmConfigPath, 'utf-8'));
+        delete pnpmConfig.packages;
+        writeFileSync(pnpmConfigPath, stringifyYaml(pnpmConfig));
+      } else {
+        rmSync(pnpmConfigPath, { force: true });
       }
+      rmSync(join(targetDir, 'turbo.json'), { force: true });
 
       const rootPkgPath = join(targetDir, 'package.json');
       const rootPkg = existsSync(rootPkgPath)
@@ -423,12 +428,13 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
       if (existsSync(newPkgPath)) {
         const webPkg = JSON.parse(readFileSync(newPkgPath, 'utf-8'));
         webPkg.name = projectName;
+        if (packageManager === 'pnpm') {
+          webPkg.engines = { ...webPkg.engines, pnpm: rootPkg.engines.pnpm };
+        }
         if (rootPkg.overrides) {
-          if (packageManager === 'pnpm') {
-            webPkg.pnpm = { overrides: rootPkg.overrides };
-          } else if (packageManager === 'yarn') {
+          if (packageManager === 'yarn') {
             webPkg.resolutions = rootPkg.overrides;
-          } else {
+          } else if (packageManager === 'npm') {
             webPkg.overrides = rootPkg.overrides;
           }
         }
@@ -475,10 +481,11 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
 
   // Install dependencies
   if (!skipInstall) {
-    const installSpinner = ora(`Installing dependencies with ${packageManager}...`).start();
+    const installSpinner = ora(`Installing dependencies with ${packageManager}...`);
+    installSpinner.info();
     try {
       const installArgs = packageManager === 'yarn' ? [] : ['install'];
-      execFileSync(packageManager, installArgs, { cwd: targetDir, stdio: 'pipe' });
+      execFileSync(packageManager, installArgs, { cwd: targetDir, stdio: 'inherit' });
       installSpinner.succeed('Dependencies installed');
     } catch (error) {
       installSpinner.fail('Failed to install dependencies');
