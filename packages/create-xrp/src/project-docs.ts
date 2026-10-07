@@ -81,6 +81,7 @@ function scriptsSection(run: string, framework: Framework): string {
         [`${run} build`, 'create a production build'],
         [`${run} start`, 'serve the production build'],
         [`${run} lint`, 'run the linter'],
+        [`${run} type-check`, 'check TypeScript types'],
         [`${run} test`, 'run payment regression tests'],
       ]
     : [
@@ -122,6 +123,8 @@ ${run} dev
 Open [http://localhost:3000](http://localhost:3000).
 
 The starter includes wallet connection, account details, a Testnet/Devnet selector, and an XRP payment form. Enter the amount in XRP, with up to six decimal places; the form converts it to drops exactly. If the recipient requires a destination tag, enter it in the optional tag field.
+
+${options.framework === 'nextjs' ? 'The app uses TypeScript. `app/layout.tsx` wraps the routes in `components/providers/WalletProvider.tsx`, which mounts the official `XrplConnectProvider` from `@xrpl-commons/xrpl-connect-react` and adds network selection and status messages.\n' : ''}
 
 ${flattened ? '' : 'Run the application-specific scripts below from `apps/web`.\n'}
 ${scripts}

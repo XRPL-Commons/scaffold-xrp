@@ -146,7 +146,7 @@ export function detectFramework(projectDir: string): 'nextjs' | 'nuxt' | null {
   if (existsSync(join(webDir, 'nuxt.config.ts'))) {
     return 'nuxt';
   }
-  if (existsSync(join(webDir, 'next.config.js')) || existsSync(join(webDir, 'next.config.mjs'))) {
+  if (['next.config.ts', 'next.config.js', 'next.config.mjs'].some((file) => existsSync(join(webDir, file)))) {
     return 'nextjs';
   }
 
@@ -593,6 +593,7 @@ export function isScaffoldXrpProject(dir: string): boolean {
   const hasAppsWeb = existsSync(join(dir, 'apps', 'web'));
   const hasTurboJson = existsSync(join(dir, 'turbo.json'));
   const hasXrplConnect =
+    existsSync(join(dir, 'apps', 'web', 'components', 'providers', 'WalletProvider.tsx')) ||
     existsSync(join(dir, 'apps', 'web', 'components', 'providers', 'WalletProvider.js')) ||
     existsSync(join(dir, 'apps', 'web', 'composables', 'useWallet.ts'));
 

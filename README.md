@@ -20,6 +20,8 @@ The CLI ships its template files with each release. Creating a project does not 
 
 The starter uses `xrpl-connect` v1 with its official React or Vue bindings. It supports **Xaman**, **GemWallet**, and **WalletConnect**.
 
+The Next.js application uses TypeScript. Its `app/layout.tsx` wraps the app with `components/providers/WalletProvider.tsx`, which mounts the official React `XrplConnectProvider` and adds the starter's network selection and status messages.
+
 Copy the generated `.env.example` to the environment file described in the project's README. Configure your own public app identifiers:
 
 | Setting | Next.js | Nuxt |

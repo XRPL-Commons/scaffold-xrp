@@ -92,6 +92,8 @@ test('build packages both framework templates without locks or the CLI source', 
   visit(templateDir);
   assert.equal(shouldCopy('/tmp/.env.production'), false);
   assert.equal(shouldCopy('/tmp/.env.local.example'), true);
+  assert.equal(shouldCopy('/tmp/tsconfig.tsbuildinfo'), false);
+  assert.equal(shouldCopy('/tmp/next-env.d.ts'), false);
 });
 
 test('noninteractive default generation creates clean Next and Nuxt starters', () => {
@@ -101,10 +103,17 @@ test('noninteractive default generation creates clean Next and Nuxt starters', (
     assert.equal(result.status, 0, result.stderr || result.stdout);
     const projectDir = join(cwd, name);
     assert.ok(existsSync(join(projectDir, '.gitignore')));
-    const pagePath = framework === 'nextjs' ? join(projectDir, 'app', 'page.js') : join(projectDir, 'pages', 'index.vue');
+    const pagePath = framework === 'nextjs' ? join(projectDir, 'app', 'page.tsx') : join(projectDir, 'pages', 'index.vue');
     const page = readFileSync(pagePath, 'utf8');
     assert.match(page, /TransactionForm/);
     assert.doesNotMatch(page, /ContractInteraction|VaultInteraction|EscrowInteraction|MPToken/);
+    if (framework === 'nextjs') {
+      assert.ok(existsSync(join(projectDir, 'tsconfig.json')));
+      assert.equal(existsSync(join(projectDir, 'app', 'page.js')), false);
+      assert.equal(existsSync(join(projectDir, 'components', 'ContractInteraction.tsx')), false);
+      const manifest = JSON.parse(readFileSync(join(projectDir, 'package.json'), 'utf8'));
+      assert.ok(manifest.scripts['type-check']);
+    }
     const readme = readFileSync(join(projectDir, 'README.md'), 'utf8');
     assert.match(readme, /Xaman/);
     assert.match(readme, /GemWallet/);
@@ -142,7 +151,7 @@ test('explicit experimental generation enables selected primitive and Bedrock se
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const projectDir = join(cwd, 'experimental-app');
   assert.ok(existsSync(join(projectDir, '.gitignore')));
-  const page = readFileSync(join(projectDir, 'apps', 'web', 'app', 'page.js'), 'utf8');
+  const page = readFileSync(join(projectDir, 'apps', 'web', 'app', 'page.tsx'), 'utf8');
   assert.match(page, /ContractInteraction/);
   assert.doesNotMatch(page, /MPToken/);
   assert.match(readFileSync(join(projectDir, 'README.md'), 'utf8'), /Bedrock-compatible/);

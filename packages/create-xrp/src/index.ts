@@ -333,7 +333,7 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
       vault: 'VaultInteraction',
       escrow: 'EscrowInteraction',
     };
-    const ext = framework === 'nextjs' ? '.js' : '.vue';
+    const ext = framework === 'nextjs' ? '.tsx' : '.vue';
     for (const [prim, comp] of Object.entries(componentMap)) {
       if (!primitives.includes(prim as Primitive)) {
         const compPath = join(webDir, 'components', comp + ext);
@@ -347,14 +347,14 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
     if (framework === 'nextjs') {
       const mpComponents = ['MPTokenCard', 'MPTokenCreate', 'MPTokenTransfer', 'MPTokenAuthorize'];
       for (const comp of mpComponents) {
-        const compPath = join(webDir, 'components', comp + '.js');
+        const compPath = join(webDir, 'components', comp + '.tsx');
         if (existsSync(compPath)) rmSync(compPath);
       }
     }
 
     // Generate page dynamically based on selected primitives
     const pagePath = framework === 'nextjs'
-      ? join(webDir, 'app', 'page.js')
+      ? join(webDir, 'app', 'page.tsx')
       : join(webDir, 'pages', 'index.vue');
     const pageContent = framework === 'nextjs'
       ? generateNextJsPage(primitives)

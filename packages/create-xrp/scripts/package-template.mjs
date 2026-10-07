@@ -36,6 +36,7 @@ const excludedNames = new Set([
 ]);
 const excludedFiles = new Set([
   'Cargo.lock',
+  'next-env.d.ts',
   'package-lock.json',
   'pnpm-lock.yaml',
   'yarn.lock',
@@ -45,6 +46,7 @@ export function shouldCopy(sourcePath) {
   const name = basename(sourcePath);
   if (!name) return true;
   if (excludedNames.has(name) || excludedFiles.has(name)) return false;
+  if (name.endsWith('.tsbuildinfo')) return false;
   if (name.startsWith('.env') && !name.endsWith('.example')) return false;
   return true;
 }

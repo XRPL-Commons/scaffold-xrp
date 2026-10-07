@@ -1,6 +1,5 @@
 /**
  * Dynamic page generation based on selected primitives.
- * Replaces the old file-variant approach (page.js vs page-without-sc.js).
  */
 
 import type { Primitive } from './types.js';

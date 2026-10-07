@@ -35,3 +35,26 @@ Limits:
 
 - Browser runtime had no connections (`agent.browsers.list()` returned an empty list). Interactive browser behavior and real Xaman, GemWallet, and WalletConnect signing/approvals have not been verified.
 - Full dependency audit still reports four high and two critical development-tool advisories through Nuxt tooling and the Next ESLint plugin. Compatible dependency overrides were applied. Nuxt devtools are disabled; forcing patched simple-git v4 broke Nuxt initialization and was reverted. The remaining node-forge and braces advisories had no patched version available in the installed dependency paths. A clean production dependency audit does not imply a clean development dependency audit.
+
+## pnpm installation regression
+
+- [x] Reproduce installation with pnpm 11.22.0: ignored overrides plus ERR_PNPM_IGNORED_BUILDS on hidden stdout.
+- [x] Preserve pnpm-workspace.yaml settings for flat projects, use allowBuilds, and stream installer output.
+- [x] Verify fresh Next/Nuxt installs using pnpm. Additional CI coverage is prepared in an isolated branch; integration and pushes are held for the user’s manual review.
+
+## Next wallet hydration regression
+
+- [x] Identify the custom-element SSR boundary behind the reported derived-style mismatch.
+- [x] Load the connector with SSR disabled; lint/build pass and production HTML contains the loading placeholder with no wallet custom element. Applied to existing manual-test projects as well.
+
+## Next TypeScript starter
+
+- [x] Convert Next application code to strict TypeScript, preserving the official React provider.
+- [x] Update CLI generation, module detection, documentation, and checks for TypeScript files.
+- [x] Verify CLI regression tests and freshly generated TypeScript default/experimental starters locally. PR updates remain on hold for manual developer-experience review.
+
+Fresh Next and Nuxt projects now install through the CLI with pnpm 11.22.0 and pass lint, type checks where applicable, tests, and builds. Repaired the pnpm settings and installation in `/tmp/xrp-cli-testing/test` without changing application files.
+
+Manual developer-experience review takes priority: finish and verify the local CLI, then wait for user feedback before further pushes or CI runs.
+
+Local TypeScript verification: CLI tests (8) and type check passed. Generated default Next starter using pnpm 11.22.0 passed type check, lint, payment tests (11), and production build. Generated experimental Next starter using pnpm 10.34.6 and actual Bedrock initialization passed type check, lint, and production build. The rebuilt local CLI is ready at `packages/create-xrp/dist/index.js`; the default manual-test project is `/tmp/xrp-cli-testing/typescript-next`. No additional CI was triggered and no post-review changes were pushed.

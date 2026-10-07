@@ -41,7 +41,7 @@ try {
   const ignore = readFileSync(join(project, '.gitignore'), 'utf8');
   assert.match(ignore, /node_modules/);
   assert.match(ignore, /\.env/);
-  const page = readFileSync(join(project, framework === 'nextjs' ? 'app/page.js' : 'pages/index.vue'), 'utf8');
+  const page = readFileSync(join(project, framework === 'nextjs' ? 'app/page.tsx' : 'pages/index.vue'), 'utf8');
   assert.match(page, /TransactionForm/);
   assert.doesNotMatch(page, /ContractInteraction|VaultInteraction|EscrowInteraction|MPTokenCard/);
   const binding = `@xrpl-commons/xrpl-connect-${framework === 'nextjs' ? 'react' : 'vue'}`;
