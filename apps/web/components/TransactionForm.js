@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   useSigner,
   useWallet as useBindingWallet,
@@ -14,6 +14,7 @@ import { isValidClassicAddress } from "xrpl";
 import { useWallet } from "./providers/WalletProvider";
 import {
   buildPaymentTransaction,
+  normalizeSubmittedPaymentResult,
   parseXrpAmount,
 } from "../lib/payment.mjs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -46,6 +47,7 @@ export function TransactionForm() {
   const [destinationTag, setDestinationTag] = useState("");
   const [result, setResult] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const dropsPreview = useMemo(() => {
     if (!amountXrp.trim()) return null;
@@ -58,13 +60,14 @@ export function TransactionForm() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (isSubmitting) return;
+    if (submittingRef.current || isSubmitting) return;
 
     if (!connected || !account) {
       showStatus("Connect a wallet before sending XRP.", "error");
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     setResult(null);
 
@@ -79,16 +82,20 @@ export function TransactionForm() {
         isValidAddress: isValidClassicAddress,
       });
       const submittedTransaction = await signAndSubmit(transaction);
-      const validated = submittedTransaction?.validated === true;
-      const nextResult = {
-        status: validated ? "validated" : "submitted",
-        hash: submittedTransaction?.hash || "Pending",
-        id: submittedTransaction?.id,
-      };
+      const nextResult = normalizeSubmittedPaymentResult(submittedTransaction);
+
+      if (nextResult.status === "error") {
+        setResult(nextResult);
+        showStatus(`Payment failed: ${nextResult.error}`, "error");
+        addEvent("Payment Failed", submittedTransaction);
+        return;
+      }
 
       setResult(nextResult);
       showStatus(
-        validated ? "Payment validated on the ledger." : "Payment submitted; validation is pending.",
+        nextResult.status === "validated"
+          ? "Payment validated on the ledger."
+          : "Payment submitted; validation is pending.",
         "success"
       );
       addEvent("Payment Submitted", submittedTransaction);
@@ -106,7 +113,16 @@ export function TransactionForm() {
         addEvent("Payment Failed", error);
       }
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
+    }
+  };
+
+  const handleConnect = async () => {
+    try {
+      await open();
+    } catch (error) {
+      showStatus(`Wallet connection failed: ${getErrorMessage(error)}`, "error");
     }
   };
 
@@ -128,7 +144,7 @@ export function TransactionForm() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => void open()}
+                onClick={() => void handleConnect()}
                 disabled={!ready || connecting}
               >
                 {connecting ? "Connecting…" : "Connect wallet"}

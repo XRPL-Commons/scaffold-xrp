@@ -1,6 +1,8 @@
 export const DROPS_PER_XRP = 1_000_000n;
 export const MAX_XRP_DROPS = 100_000_000_000n * DROPS_PER_XRP;
 export const MAX_DESTINATION_TAG = 4_294_967_295n;
+const SUCCESS_RESULT = "TESSUCCESS";
+const QUEUED_RESULT = "TERQUEUED";
 
 export class PaymentInputError extends Error {
   constructor(code, message) {
@@ -8,6 +10,117 @@ export class PaymentInputError extends Error {
     this.name = "PaymentInputError";
     this.code = code;
   }
+}
+
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+function normalizedResultCode(value) {
+  return nonEmptyString(value) ? value.trim() : null;
+}
+
+function responseVariants(result) {
+  const variants = [];
+  const pending = [{ value: result, depth: 0 }];
+  const seen = new Set();
+
+  while (pending.length > 0) {
+    const { value, depth } = pending.shift();
+    if (!value || typeof value !== "object" || seen.has(value)) continue;
+    seen.add(value);
+    variants.push(value);
+
+    if (depth >= 2) continue;
+    for (const key of ["submitResult", "result", "tx_json"]) {
+      if (value[key] && typeof value[key] === "object") {
+        pending.push({ value: value[key], depth: depth + 1 });
+      }
+    }
+  }
+
+  return variants;
+}
+
+function resultCodes(result) {
+  const variants = responseVariants(result);
+  const metaCodes = variants
+    .flatMap((variant) => [
+      variant?.meta?.TransactionResult,
+      variant?.TransactionResult,
+    ])
+    .map(normalizedResultCode)
+    .filter(Boolean);
+  const engineCodes = variants
+    .flatMap((variant) => [variant?.engine_result, variant?.engineResult])
+    .map(normalizedResultCode)
+    .filter(Boolean);
+
+  return { metaCodes, engineCodes, codes: [...metaCodes, ...engineCodes] };
+}
+
+/**
+ * Normalize the intentionally small result contract shared by XRPL Connect
+ * v1 adapters. A hash means a wallet handed back a submission identity; only
+ * validated metadata proves that the ledger accepted it. An engine result is
+ * useful submission evidence, but it is not validation evidence by itself.
+ */
+export function normalizeSubmittedPaymentResult(result) {
+  if (!result || typeof result !== "object") {
+    return {
+      status: "error",
+      error: "Wallet returned no payment result.",
+    };
+  }
+
+  const variants = responseVariants(result);
+  const hash = variants.map((variant) => variant.hash).find(nonEmptyString);
+  if (!hash) {
+    return {
+      status: "error",
+      error: "Wallet returned no transaction hash; the payment was not confirmed as submitted.",
+    };
+  }
+
+  const { metaCodes, codes } = resultCodes(result);
+  const failureCode = codes.find(
+    (code) =>
+      code.toUpperCase() !== SUCCESS_RESULT && code.toUpperCase() !== QUEUED_RESULT
+  );
+  if (failureCode) {
+    const message = variants
+      .map((variant) => variant.engine_result_message || variant.error_message)
+      .find(nonEmptyString);
+    return {
+      status: "error",
+      hash,
+      id: result.id,
+      resultCode: failureCode,
+      error: message || `Ledger rejected the payment (${failureCode}).`,
+    };
+  }
+
+  const explicitError = variants
+    .map((variant) => variant.error)
+    .find(nonEmptyString);
+  if (explicitError) {
+    return {
+      status: "error",
+      hash,
+      id: result.id,
+      error: explicitError,
+    };
+  }
+
+  const validated = metaCodes.some(
+    (code) => code.toUpperCase() === SUCCESS_RESULT
+  );
+  return {
+    status: validated ? "validated" : "submitted",
+    hash,
+    id: result.id,
+    resultCode: codes[0],
+  };
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   useWalletModal,
 } from "@xrpl-commons/xrpl-connect-react";
 import { useWallet } from "./providers/WalletProvider";
+import { WalletSetupDetails } from "./WalletSetupDetails";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -19,7 +20,16 @@ export function AccountInfo() {
     connecting,
   } = useBindingWallet();
   const { ready, open } = useWalletModal();
-  const { selectedNetwork } = useWallet();
+  const { selectedNetwork, showStatus } = useWallet();
+
+  const handleConnect = async () => {
+    try {
+      await open();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showStatus(`Wallet connection failed: ${message}`, "error");
+    }
+  };
 
   if (!connected || !account) {
     return (
@@ -37,13 +47,14 @@ export function AccountInfo() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => void open()}
+                onClick={() => void handleConnect()}
                 disabled={!ready || connecting}
               >
                 {connecting ? "Connecting…" : "Connect wallet"}
               </Button>
             </AlertDescription>
           </Alert>
+          <WalletSetupDetails />
         </CardContent>
       </Card>
     );

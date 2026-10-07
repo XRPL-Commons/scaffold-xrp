@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildPaymentTransaction,
+  normalizeSubmittedPaymentResult,
   parseDestinationTag,
   parseXrpAmount,
   PaymentInputError,
@@ -62,5 +63,80 @@ test("prevents a payment when the wallet network differs", () => {
         isValidAddress: validAddress,
       }),
     /switch it to testnet/
+  );
+});
+
+test("requires ledger success metadata before showing validation", () => {
+  assert.deepEqual(
+    normalizeSubmittedPaymentResult({
+      hash: "ABC123",
+      validated: true,
+      meta: { TransactionResult: "tesSUCCESS" },
+    }),
+    {
+      status: "validated",
+      hash: "ABC123",
+      id: undefined,
+      resultCode: "tesSUCCESS",
+    }
+  );
+
+  assert.equal(
+    normalizeSubmittedPaymentResult({ hash: "ABC123", validated: true }).status,
+    "submitted"
+  );
+});
+
+test("does not turn a rejected ledger result into a successful payment", () => {
+  const result = normalizeSubmittedPaymentResult({
+    hash: "ABC123",
+    validated: true,
+    engine_result: "tesSUCCESS",
+    meta: { TransactionResult: "tecNO_DST" },
+  });
+
+  assert.equal(result.status, "error");
+  assert.match(result.error, /tecNO_DST/);
+});
+
+test("inspects the adapter submitResult wrapper for ledger outcomes", () => {
+  const result = normalizeSubmittedPaymentResult({
+    hash: "ABC123",
+    submitResult: {
+      result: {
+        engine_result: "tesSUCCESS",
+        meta: { TransactionResult: "tecNO_DST" },
+      },
+    },
+  });
+
+  assert.equal(result.status, "error");
+  assert.match(result.error, /tecNO_DST/);
+});
+
+test("keeps a hash-only adapter response submitted but unvalidated", () => {
+  assert.deepEqual(normalizeSubmittedPaymentResult({ hash: "ABC123" }), {
+    status: "submitted",
+    hash: "ABC123",
+    id: undefined,
+    resultCode: undefined,
+  });
+});
+
+test("treats explicit adapter errors as failures even with a hash", () => {
+  const result = normalizeSubmittedPaymentResult({
+    hash: "ABC123",
+    submitResult: { error: "Submission was rejected" },
+  });
+
+  assert.equal(result.status, "error");
+  assert.equal(result.error, "Submission was rejected");
+});
+
+test("rejects empty or missing adapter results", () => {
+  assert.equal(normalizeSubmittedPaymentResult(null).status, "error");
+  assert.equal(
+    normalizeSubmittedPaymentResult({ validated: true }).status,
+    "error"
   );
 });
