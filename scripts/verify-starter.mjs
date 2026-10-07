@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,17 +46,11 @@ function packageManagerVersion(command, cwd) {
   }).trim();
 }
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function assertPnpmWorkspaceConfig(project) {
+function assertPnpmWorkspaceConfig(project, parseYaml) {
   const configPath = join(project, 'pnpm-workspace.yaml');
   assert.ok(existsSync(configPath), 'pnpm projects must retain pnpm-workspace.yaml');
-  const config = readFileSync(configPath, 'utf8');
-  assert.doesNotMatch(config, /^packages:/m, 'Flattened pnpm projects must not declare workspace packages');
-  assert.match(config, /^allowBuilds:\s*$/m, 'pnpm build approval settings must be preserved');
-
+  const config = parseYaml(readFileSync(configPath, 'utf8'));
+  assert.equal(config.packages, undefined, 'Flattened pnpm projects must not declare workspace packages');
   const expectedBuildApprovals = {
     '@parcel/watcher': true,
     esbuild: true,
@@ -65,14 +60,7 @@ function assertPnpmWorkspaceConfig(project) {
     'es5-ext': false,
     'utf-8-validate': false,
   };
-  for (const [dependency, allowed] of Object.entries(expectedBuildApprovals)) {
-    const key = dependency.startsWith('@') ? `'${dependency}'` : dependency;
-    assert.match(
-      config,
-      new RegExp(`^  ${escapeRegExp(key)}:\\s*${allowed}\\s*$`, 'm'),
-      `pnpm allowBuilds must set ${dependency}=${allowed}`,
-    );
-  }
+  assert.deepEqual(config.allowBuilds, expectedBuildApprovals, 'pnpm build approvals must be preserved');
 }
 
 function configurePackageManager() {
@@ -126,6 +114,7 @@ try {
   mkdirSync(runner);
   run(npm, ['install', '--no-audit', '--no-fund', '--ignore-scripts', join(temporary, packed[0].filename)], runner);
   const cli = join(runner, 'node_modules/create-xrp/dist/index.js');
+  const { parse: parseYaml } = createRequire(cli)('yaml');
   run(process.execPath, [cli, 'payment-app', '--framework', framework, '--pm', packageManager, '--no-experimental'], temporary);
 
   const project = join(temporary, 'payment-app');
@@ -157,7 +146,7 @@ try {
     assert.ok(existsSync(join(project, 'pnpm-lock.yaml')), 'pnpm CLI installation must create pnpm-lock.yaml');
     assert.ok(!existsSync(join(project, 'package-lock.json')), 'pnpm projects must not create package-lock.json');
     assert.equal(manifest.pnpm, undefined, 'pnpm settings belong in pnpm-workspace.yaml, not package.json');
-    assertPnpmWorkspaceConfig(project);
+    assertPnpmWorkspaceConfig(project, parseYaml);
     const actualVersion = packageManagerVersion(selectedPackageManager, project);
     if (requestedPackageManagerVersion) {
       assert.equal(
