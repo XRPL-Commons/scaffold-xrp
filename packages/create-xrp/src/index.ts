@@ -44,7 +44,9 @@ function removeCreateXrpTurboTask(projectDir: string): void {
   const config = JSON.parse(readFileSync(turboPath, 'utf-8'));
   for (const taskSection of ['tasks', 'pipeline']) {
     if (config[taskSection] && typeof config[taskSection] === 'object') {
-      delete config[taskSection]['create-xrp#build'];
+      for (const taskName of Object.keys(config[taskSection])) {
+        if (taskName.startsWith('create-xrp#')) delete config[taskSection][taskName];
+      }
     }
   }
   writeFileSync(turboPath, JSON.stringify(config, null, 2) + '\n');
@@ -372,6 +374,10 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
       if (existsSync(packageJsonPath)) {
         const rootPkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
         rootPkg.name = projectName;
+        if (packageManager !== 'pnpm') delete rootPkg.packageManager;
+        if (packageManager === 'yarn' && rootPkg.overrides) {
+          rootPkg.resolutions = rootPkg.overrides;
+        }
         writeFileSync(packageJsonPath, JSON.stringify(rootPkg, null, 2) + '\n');
       }
     } else {
@@ -417,8 +423,14 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
       if (existsSync(newPkgPath)) {
         const webPkg = JSON.parse(readFileSync(newPkgPath, 'utf-8'));
         webPkg.name = projectName;
-        if (packageManager === 'pnpm' && rootPkg.pnpm) {
-          webPkg.pnpm = rootPkg.pnpm;
+        if (rootPkg.overrides) {
+          if (packageManager === 'pnpm') {
+            webPkg.pnpm = { overrides: rootPkg.overrides };
+          } else if (packageManager === 'yarn') {
+            webPkg.resolutions = rootPkg.overrides;
+          } else {
+            webPkg.overrides = rootPkg.overrides;
+          }
         }
         writeFileSync(newPkgPath, JSON.stringify(webPkg, null, 2) + '\n');
         updateXrplDependencies(newPkgPath, []);

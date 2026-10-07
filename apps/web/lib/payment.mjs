@@ -112,7 +112,7 @@ export function normalizeSubmittedPaymentResult(result) {
     };
   }
 
-  const validated = metaCodes.some(
+  const validated = variants.some((variant) => variant.validated === true) && metaCodes.some(
     (code) => code.toUpperCase() === SUCCESS_RESULT
   );
   return {

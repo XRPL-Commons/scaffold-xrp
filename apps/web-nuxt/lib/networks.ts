@@ -37,7 +37,7 @@ export const NETWORK_STORAGE_KEY = 'scaffold-xrp-network'
 
 export function getNetworkById(networkId: unknown): StarterNetwork | null {
   if (typeof networkId !== 'string') return null
-  return NETWORKS[networkId as NetworkId] ?? null
+  return SUPPORTED_NETWORKS.find((network) => network.id === networkId) ?? null
 }
 
 export function getInitialNetworkId(fallback: unknown): NetworkId {
@@ -45,5 +45,9 @@ export function getInitialNetworkId(fallback: unknown): NetworkId {
 
   if (typeof window === 'undefined') return fallbackNetwork
 
-  return getNetworkById(window.localStorage.getItem(NETWORK_STORAGE_KEY))?.id ?? fallbackNetwork
+  try {
+    return getNetworkById(window.localStorage.getItem(NETWORK_STORAGE_KEY))?.id ?? fallbackNetwork
+  } catch {
+    return fallbackNetwork
+  }
 }

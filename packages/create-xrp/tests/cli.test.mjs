@@ -108,10 +108,11 @@ test('noninteractive default generation creates clean Next and Nuxt starters', (
     assert.match(readme, /Xaman/);
     assert.match(readme, /GemWallet/);
     assert.match(readme, /WalletConnect/);
-    assert.match(readme, framework === 'nextjs' ? /NEXT_PUBLIC_XAMAN_API_KEY/ : /VITE_XAMAN_API_KEY/);
-    assert.match(readme, framework === 'nextjs' ? /NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID/ : /VITE_WALLETCONNECT_PROJECT_ID/);
-    assert.match(readme, /1 XRP = 1,000,000 drops/);
-    assert.match(readme, /DestinationTag/);
+    assert.match(readme, framework === 'nextjs' ? /NEXT_PUBLIC_XAMAN_API_KEY/ : /NUXT_PUBLIC_XAMAN_API_KEY/);
+    assert.match(readme, framework === 'nextjs' ? /NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID/ : /NUXT_PUBLIC_WALLETCONNECT_PROJECT_ID/);
+    assert.match(readme, /amount in XRP/);
+    assert.match(readme, /optional tag field/);
+    assert.doesNotMatch(readme, /VITE_|DEFAULT_NETWORK=alphanet|Crossmark|Otsu/);
     assert.match(readme, /Node\.js `\^22\.18\.0 \|\| >=24\.11\.0`/);
     if (framework === 'nuxt') {
       assert.match(readme, /Runtime environment: `\.env` \(Nuxt reads `\.env`/);
@@ -147,6 +148,20 @@ test('explicit experimental generation enables selected primitive and Bedrock se
   assert.ok(existsSync(join(projectDir, 'packages', 'bedrock')));
   const turbo = JSON.parse(readFileSync(join(projectDir, 'turbo.json'), 'utf8'));
   assert.equal(turbo.tasks?.['create-xrp#build'], undefined);
+});
+
+test('generated projects retain dependency constraints for the chosen package manager', () => {
+  const cwd = createTempDirectory('create-xrp-dependency-constraints');
+  const templateManifest = JSON.parse(readFileSync(join(packageDir, 'template/package.json'), 'utf8'));
+  for (const packageManager of ['npm', 'pnpm', 'yarn']) {
+    const result = runCli(cwd, [packageManager + '-app', '--framework', 'nextjs', '--pm', packageManager, '--no-experimental', '--skip-install']);
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const manifest = JSON.parse(readFileSync(join(cwd, packageManager + '-app', 'package.json'), 'utf8'));
+    const constraints = packageManager === 'pnpm'
+      ? manifest.pnpm?.overrides
+      : packageManager === 'yarn' ? manifest.resolutions : manifest.overrides;
+    assert.deepEqual(constraints, templateManifest.overrides);
+  }
 });
 
 test('Bedrock initialization failures return nonzero without false success', () => {

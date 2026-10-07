@@ -53,9 +53,10 @@ export function useWallet() {
 
   function showStatus(message: string, type: StatusMessage['type'] = 'info') {
     statusMessage.value = { message, type }
+    const currentStatus = statusMessage.value
     if (import.meta.client) {
       window.setTimeout(() => {
-        if (statusMessage.value?.message === message) statusMessage.value = null
+        if (statusMessage.value === currentStatus) statusMessage.value = null
       }, 5000)
     }
   }

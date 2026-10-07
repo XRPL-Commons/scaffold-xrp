@@ -24,7 +24,7 @@ pnpm build
 
 Use meaningful regression tests for transaction validation, wallet lifecycle, and CLI generation. Never claim an external wallet flow was verified solely because a build or mocked test passed.
 
-The CLI build packages templates from the repository's current app sources. Its build cache includes those sources, so changes to an app must appear in the next generated project.
+The CLI build packages templates from the repository's current app sources. CLI builds and generation tests are not cached, so changes to either app always appear in the next generated project and its verification.
 
 ## Check the distributable
 

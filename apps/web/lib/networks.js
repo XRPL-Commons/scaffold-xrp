@@ -19,7 +19,10 @@ export const NETWORKS = {
   },
 };
 
-export const DEFAULT_NETWORK = NETWORKS.TESTNET;
+export const DEFAULT_NETWORK =
+  Object.values(NETWORKS).find(
+    (network) => network.id === process.env.NEXT_PUBLIC_DEFAULT_NETWORK
+  ) ?? NETWORKS.TESTNET;
 
 export const SUPPORTED_NETWORKS = Object.values(NETWORKS);
 

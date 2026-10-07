@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": ["**/.env", "**/.env.*"],
+  "globalEnv": ["NEXT_PUBLIC_*", "NUXT_PUBLIC_*"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -16,8 +17,11 @@
       "dependsOn": ["^build"]
     },
     "create-xrp#build": {
-      "inputs": ["$TURBO_DEFAULT$", "../../apps/**", "../../package.json", "../../pnpm-workspace.yaml", "../../turbo.json", "../../.gitignore", "../../LICENSE"],
-      "outputs": ["dist/**", "templates/**"]
+      "cache": false,
+      "outputs": ["dist/**", "template/**"]
+    },
+    "create-xrp#test": {
+      "cache": false
     },
     "dev": {
       "cache": false,

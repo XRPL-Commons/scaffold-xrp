@@ -13,7 +13,6 @@
     "type-check": "turbo type-check",
     "test": "turbo test",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
@@ -24,5 +23,9 @@
     "node": "^22.18.0 || >=24.11.0",
     "pnpm": ">=10.0.0"
   },
-  "packageManager": "pnpm@10.34.6"
+  "packageManager": "pnpm@10.34.6",
+  "overrides": {
+    "esbuild": "0.28.2",
+    "postcss-selector-parser": "7.1.6"
+  }
 }

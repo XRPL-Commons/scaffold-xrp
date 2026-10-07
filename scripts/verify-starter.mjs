@@ -38,6 +38,9 @@ try {
   assert.ok(!existsSync(join(project, 'packages/bedrock')), 'Default projects must not include Bedrock');
   assert.ok(!existsSync(join(project, 'pnpm-lock.yaml')), 'Generated projects must not inherit the monorepo lockfile');
   assert.ok(existsSync(join(project, '.env.example')), 'Wallet configuration example must be packaged');
+  const ignore = readFileSync(join(project, '.gitignore'), 'utf8');
+  assert.match(ignore, /node_modules/);
+  assert.match(ignore, /\.env/);
   const page = readFileSync(join(project, framework === 'nextjs' ? 'app/page.js' : 'pages/index.vue'), 'utf8');
   assert.match(page, /TransactionForm/);
   assert.doesNotMatch(page, /ContractInteraction|VaultInteraction|EscrowInteraction|MPTokenCard/);

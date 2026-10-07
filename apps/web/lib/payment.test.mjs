@@ -85,6 +85,14 @@ test("requires ledger success metadata before showing validation", () => {
     normalizeSubmittedPaymentResult({ hash: "ABC123", validated: true }).status,
     "submitted"
   );
+  assert.equal(
+    normalizeSubmittedPaymentResult({
+      hash: "ABC123",
+      validated: false,
+      meta: { TransactionResult: "tesSUCCESS" },
+    }).status,
+    "submitted"
+  );
 });
 
 test("does not turn a rejected ledger result into a successful payment", () => {

@@ -42,11 +42,11 @@ function environmentDocumentation(options: ProjectDocumentationOptions): Environ
     networkExample: `${prefix}.env.example`,
     walletExample: `${prefix}.env.local.example`,
     runtimeFile: next ? `${prefix}.env.local` : `${prefix}.env`,
-    networkKey: next ? 'NEXT_PUBLIC_DEFAULT_NETWORK' : 'VITE_DEFAULT_NETWORK',
+    networkKey: next ? 'NEXT_PUBLIC_DEFAULT_NETWORK' : 'NUXT_PUBLIC_DEFAULT_NETWORK',
     walletKeys: next
       ? ['NEXT_PUBLIC_XAMAN_API_KEY', 'NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID']
-      : ['VITE_XAMAN_API_KEY', 'VITE_WALLETCONNECT_PROJECT_ID'],
-    networkValue: 'alphanet',
+      : ['NUXT_PUBLIC_XAMAN_API_KEY', 'NUXT_PUBLIC_WALLETCONNECT_PROJECT_ID'],
+    networkValue: 'testnet',
   };
 }
 
@@ -81,6 +81,7 @@ function scriptsSection(run: string, framework: Framework): string {
         [`${run} build`, 'create a production build'],
         [`${run} start`, 'serve the production build'],
         [`${run} lint`, 'run the linter'],
+        [`${run} test`, 'run payment regression tests'],
       ]
     : [
         [`${run} dev`, 'start the development server'],
@@ -88,6 +89,8 @@ function scriptsSection(run: string, framework: Framework): string {
         [`${run} generate`, 'generate a static site'],
         [`${run} preview`, 'preview the production build'],
         [`${run} lint`, 'run the linter'],
+        [`${run} type-check`, 'check TypeScript and Vue types'],
+        [`${run} test`, 'run payment regression tests'],
       ];
 
   return `## Scripts\n\n${scripts.map(([command, description]) => `- \`${command}\` - ${description}`).join('\n')}\n`;
@@ -118,30 +121,34 @@ ${run} dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The starter includes wallet connection, account details, and an XRP payment form. The payment amount is entered in drops (\`1 XRP = 1,000,000 drops\`). When a recipient requires a \`DestinationTag\`, include it in the Payment payload and preserve the exchange or custodian's value exactly before signing.
+The starter includes wallet connection, account details, a Testnet/Devnet selector, and an XRP payment form. Enter the amount in XRP, with up to six decimal places; the form converts it to drops exactly. If the recipient requires a destination tag, enter it in the optional tag field.
 
+${flattened ? '' : 'Run the application-specific scripts below from `apps/web`.\n'}
 ${scripts}
 
 ## Wallets and environment
 
-The wallet header supports Xaman, GemWallet, and WalletConnect. Xaman uses \`${environment.walletKeys[0]}\`; WalletConnect uses \`${environment.walletKeys[1]}\`; GemWallet is a browser wallet and does not require an API key. Crossmark and Otsu are also available when their browser extensions are installed.
+The wallet header supports Xaman, GemWallet, and WalletConnect. Xaman uses \`${environment.walletKeys[0]}\`; WalletConnect uses \`${environment.walletKeys[1]}\`; GemWallet requires its browser extension and does not require an API key.
 
 The generated examples use these files:
 
-- Network settings: \`${environment.networkExample}\` (\`${environment.networkKey}=...\`, optional AlphaNet endpoint variables are documented there).
+- Network and wallet settings: \`${environment.networkExample}\` (\`${environment.networkKey}=testnet\` or \`devnet\`).
 - Wallet settings: \`${environment.walletExample}\` (\`${environment.walletKeys[0]}\` and \`${environment.walletKeys[1]}\`).
 - Runtime environment: \`${environment.runtimeFile}\` (${options.framework === 'nuxt' ? 'Nuxt reads `.env` while running.' : 'Next.js reads `.env.local` while running.'})
 
-Start with the network example, then add the wallet values to the runtime file:
+Copy the example, then edit the runtime file:
 
 ~~~bash
 cp ${environment.networkExample} ${environment.runtimeFile}
+~~~
+
+~~~dotenv
 ${environment.networkKey}=${environment.networkValue}
 ${environment.walletKeys[0]}=your_xaman_api_key_here
 ${environment.walletKeys[1]}=your_walletconnect_project_id_here
 ~~~
 
-The conventional XRP payment starter can use XRPL Testnet or Devnet with test funds. Confirm the selected network in the wallet before signing. Keep wallet seeds and API keys out of source control.
+Testnet is the default; Devnet is also available. Fund your wallet using the [XRPL test faucets](https://xrpl.org/resources/dev-tools/xrp-faucets) and confirm the network before signing. These environment variables are public browser configuration. Never put API secrets or wallet seeds in them. Restart the development server after editing the environment file.
 
 ${experimental ? 'Experimental features are opt-in and described below.' : 'Advanced contract features are omitted from this starter. Re-run create-xrp with --experimental and --primitives to include them.'}
 ${experimental}
@@ -162,7 +169,7 @@ ${install}
 ${run} dev
 ~~~
 
-Configure \`${environment.runtimeFile}\` with \`${environment.networkKey}\`, \`${environment.walletKeys[0]}\`, and \`${environment.walletKeys[1]}\`. Xaman and WalletConnect need those credentials; GemWallet works through its browser extension. Use test funds on XRPL Testnet or Devnet, and verify the destination, amount in drops, and any DestinationTag before signing.
+Configure \`${environment.runtimeFile}\` with \`${environment.networkKey}\`, \`${environment.walletKeys[0]}\`, and \`${environment.walletKeys[1]}\`. Xaman and WalletConnect need their public app identifiers; GemWallet works through its browser extension. Use test funds on XRPL Testnet or Devnet, and verify the destination, amount in XRP, and optional destination tag before signing.
 
 ${experimental ? 'This project includes experimental primitives. Use a Bedrock-compatible local or AlphaNet network for those transaction types; standard XRPL Testnet and Devnet may reject them.\n' : 'This project contains only conventional XRP Ledger starter functionality.\n'}
 `;
