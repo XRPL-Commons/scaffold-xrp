@@ -2,15 +2,10 @@
 import {
   useSigner,
   useWallet as useBindingWallet,
-  useWalletModal,
 } from '@xrpl-commons/xrpl-connect-vue'
 import { isWalletError, WalletErrorCode } from 'xrpl-connect'
 import { isValidClassicAddress } from 'xrpl'
-import {
-  buildPaymentTransaction,
-  normalizeSubmittedPaymentResult,
-  parseXrpAmount,
-} from '~/lib/payment.mjs'
+import { buildPaymentTransaction, normalizeSubmittedPaymentResult } from '~/lib/payment.mjs'
 
 type PaymentResult =
   | {
@@ -29,7 +24,6 @@ type PaymentResult =
 
 const { connected, account, connecting } = useBindingWallet()
 const { signAndSubmit } = useSigner()
-const { ready, open } = useWalletModal()
 const { selectedNetwork, addEvent, showStatus } = useWallet()
 
 const destination = ref('')
@@ -37,15 +31,6 @@ const amountXrp = ref('')
 const destinationTag = ref('')
 const result = ref<PaymentResult | null>(null)
 const isSubmitting = ref(false)
-
-const dropsPreview = computed(() => {
-  if (!amountXrp.value.trim()) return null
-  try {
-    return parseXrpAmount(amountXrp.value)
-  } catch {
-    return null
-  }
-})
 
 const networkMismatch = computed(
   () => Boolean(account.value && account.value.network.id !== selectedNetwork.value.id),
@@ -64,15 +49,6 @@ function isCancelledWalletAction(error: unknown) {
     isWalletError(error) &&
     [WalletErrorCode.SIGN_REJECTED, WalletErrorCode.CONNECTION_REJECTED].includes(error.code)
   )
-}
-
-async function openWallet() {
-  try {
-    await open()
-  } catch (error) {
-    const message = getErrorMessage(error)
-    showStatus(`Could not open wallet selection: ${message}`, 'error')
-  }
 }
 
 async function handleSubmit() {
@@ -137,39 +113,23 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <section class="rounded-lg border bg-card text-card-foreground shadow-sm">
-    <div class="flex flex-col space-y-1.5 p-6 pb-3">
-      <h2 class="text-base font-semibold leading-none tracking-tight">Send XRP</h2>
-      <p class="text-sm text-muted-foreground">
-        Send XRP on {{ selectedNetwork.name }}. Amounts are converted to drops exactly.
-      </p>
+  <section class="rounded-xl border bg-card p-6 text-card-foreground shadow-sm md:p-8">
+    <div class="space-y-1">
+      <h2 class="text-lg font-semibold tracking-tight">Send XRP</h2>
+      <p class="text-sm text-muted-foreground">Send XRP on {{ selectedNetwork.name }}.</p>
     </div>
 
-    <div class="p-6 pt-0">
-      <div
-        v-if="!connected"
-        class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 text-sm"
-      >
-        <span class="text-muted-foreground">Connect a wallet to sign this payment.</span>
-        <button
-          type="button"
-          class="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-          :disabled="!ready || connecting"
-          @click="openWallet"
-        >
-          {{ connecting ? 'Connecting…' : 'Connect wallet' }}
-        </button>
-      </div>
-
+    <div class="mt-6">
       <div
         v-if="networkMismatch"
-        class="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+        role="alert"
+        class="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
       >
         Your wallet is on {{ account?.network.name }}. Switch it to {{ selectedNetwork.name }}
         before sending.
       </div>
 
-      <form class="space-y-4" @submit.prevent="handleSubmit">
+      <form class="space-y-6" @submit.prevent="handleSubmit">
         <div class="space-y-2">
           <label for="destination" class="text-sm font-medium leading-none">
             Destination address
@@ -180,50 +140,80 @@ async function handleSubmit() {
             type="text"
             autocomplete="off"
             placeholder="rN7n7otQDd6FczFgLdlqtyMVrn3HMfXoQT"
-            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            class="flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             required
           >
-        </div>
-
-        <div class="space-y-2">
-          <label for="destinationTag" class="text-sm font-medium leading-none">
-            Destination tag <span class="font-normal text-muted-foreground">(optional)</span>
-          </label>
-          <input
-            id="destinationTag"
-            v-model="destinationTag"
-            type="text"
-            inputmode="numeric"
-            autocomplete="off"
-            placeholder="e.g. 12345"
-            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          >
-          <p class="text-xs text-muted-foreground">
-            Include a tag when the recipient provides one, such as an exchange deposit.
-          </p>
         </div>
 
         <div class="space-y-2">
           <label for="amountXrp" class="text-sm font-medium leading-none">Amount (XRP)</label>
-          <input
-            id="amountXrp"
-            v-model="amountXrp"
-            type="text"
-            inputmode="decimal"
-            autocomplete="off"
-            placeholder="1.5"
-            class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            required
-          >
-          <p class="text-xs text-muted-foreground">
-            {{ dropsPreview ? `${dropsPreview} drops` : 'Up to six decimal places' }} · 1 XRP = 1,000,000 drops
-          </p>
+          <div class="relative">
+            <input
+              id="amountXrp"
+              v-model="amountXrp"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="1.5"
+              aria-describedby="amount-help"
+              class="flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 pr-16 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              required
+            >
+            <span
+              aria-hidden="true"
+              class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-muted-foreground"
+            >
+              XRP
+            </span>
+          </div>
+          <p id="amount-help" class="text-xs text-muted-foreground">Up to six decimal places.</p>
         </div>
+
+        <details class="group">
+          <summary
+            class="flex cursor-pointer list-none items-center gap-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+          >
+            <svg
+              aria-hidden="true"
+              class="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+            </svg>
+            <span v-if="destinationTag.trim()">
+              Destination tag: {{ destinationTag.trim() }}
+            </span>
+            <template v-else>
+              <span>Add destination tag</span>
+              <span class="font-normal text-muted-foreground">(optional)</span>
+            </template>
+          </summary>
+          <div class="mt-4 space-y-2">
+            <label for="destinationTag" class="text-sm font-medium leading-none">
+              Destination tag
+            </label>
+            <input
+              id="destinationTag"
+              v-model="destinationTag"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="e.g. 12345"
+              class="flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+            <p class="text-xs text-muted-foreground">
+              Include the tag if the recipient requires one.
+            </p>
+          </div>
+        </details>
 
         <button
           type="submit"
           :disabled="!connected || connecting || networkMismatch || isSubmitting"
-          class="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+          class="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
         >
           {{ isSubmitting ? 'Waiting for wallet…' : 'Sign & submit payment' }}
         </button>
@@ -231,6 +221,8 @@ async function handleSubmit() {
 
       <div
         v-if="result?.status === 'submitted' || result?.status === 'validated'"
+        role="status"
+        aria-live="polite"
         class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-800"
       >
         <h3 class="mb-1 font-medium">
@@ -245,7 +237,8 @@ async function handleSubmit() {
 
       <div
         v-else-if="failureMessage"
-          :class="[
+        role="alert"
+        :class="[
           'mt-4 rounded-lg border p-4',
           paymentCancelled
             ? 'border-amber-200 bg-amber-50 text-amber-900'
