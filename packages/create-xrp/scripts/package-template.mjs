@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,7 +41,7 @@ const excludedFiles = new Set([
   'yarn.lock',
 ]);
 
-function shouldCopy(sourcePath) {
+export function shouldCopy(sourcePath) {
   const name = basename(sourcePath);
   if (!name) return true;
   if (excludedNames.has(name) || excludedFiles.has(name)) return false;
@@ -52,17 +52,36 @@ function shouldCopy(sourcePath) {
 function copyEntry(relativePath) {
   const sourcePath = join(repoDir, relativePath);
   if (!existsSync(sourcePath)) return;
-  const destinationPath = join(templateDir, relativePath);
+  const destinationRelativePath = relativePath === '.gitignore' ? '_gitignore' : relativePath;
+  const destinationPath = join(templateDir, destinationRelativePath);
   cpSync(sourcePath, destinationPath, {
     recursive: true,
     filter: shouldCopy,
   });
 }
 
-rmSync(templateDir, { recursive: true, force: true });
-mkdirSync(templateDir, { recursive: true });
+function renameGitignoreFiles(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const sourcePath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      renameGitignoreFiles(sourcePath);
+    } else if (entry.name === '.gitignore') {
+      renameSync(sourcePath, join(directory, '_gitignore'));
+    }
+  }
+}
 
-for (const relativePath of rootFiles) copyEntry(relativePath);
-for (const relativePath of rootDirectories) copyEntry(relativePath);
+export function packageTemplate() {
+  rmSync(templateDir, { recursive: true, force: true });
+  mkdirSync(templateDir, { recursive: true });
 
-console.log(`Packaged scaffold template at ${templateDir}`);
+  for (const relativePath of rootFiles) copyEntry(relativePath);
+  for (const relativePath of rootDirectories) copyEntry(relativePath);
+  renameGitignoreFiles(templateDir);
+
+  console.log(`Packaged scaffold template at ${templateDir}`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  packageTemplate();
+}

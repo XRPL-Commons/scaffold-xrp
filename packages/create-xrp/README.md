@@ -6,6 +6,8 @@ The default project contains account, payment, and header components. Experiment
 Bedrock primitives are opt-in so a new project does not depend on experimental
 network support.
 
+Requires Node.js `^22.18.0 || >=24.11.0`.
+
 ## Usage
 
 ```bash
@@ -28,6 +30,10 @@ npx create-xrp my-app --framework nextjs --pm pnpm \
 `contract`, `vault`, and `escrow`. Experimental contracts require a Bedrock-
 compatible local network or AlphaNet; standard XRPL Testnet and Devnet may
 reject them. Use `--skip-install` when dependencies will be installed later.
+
+Generated Next.js projects use `.env.local`; generated Nuxt projects use `.env`
+for runtime variables. The generated README lists the exact network and wallet
+keys for each framework.
 
 Or use any package manager:
 

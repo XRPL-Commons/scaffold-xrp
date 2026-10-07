@@ -26,6 +26,8 @@ import {
   parseFramework,
   parsePackageManager,
   parsePrimitives,
+  shouldPromptExperimental,
+  validateExperimentalPrimitives,
   type CliOptions,
 } from './options.js';
 
@@ -34,6 +36,19 @@ const __dirname = dirname(__filename);
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 
 const program = new Command();
+
+function removeCreateXrpTurboTask(projectDir: string): void {
+  const turboPath = join(projectDir, 'turbo.json');
+  if (!existsSync(turboPath)) return;
+
+  const config = JSON.parse(readFileSync(turboPath, 'utf-8'));
+  for (const taskSection of ['tasks', 'pipeline']) {
+    if (config[taskSection] && typeof config[taskSection] === 'object') {
+      delete config[taskSection]['create-xrp#build'];
+    }
+  }
+  writeFileSync(turboPath, JSON.stringify(config, null, 2) + '\n');
+}
 
 async function main() {
   program
@@ -130,7 +145,7 @@ async function promptUser(providedName?: string, options: CliOptions = {}): Prom
   }
 
   let experimental = options.experimental === true;
-  if (!options.experimental && !hasAllNonInteractiveOptions(projectName, options)) {
+  if (shouldPromptExperimental(projectName, options)) {
     const answer = await inquirer.prompt<{ experimental: boolean }>([
       {
         type: 'confirm',
@@ -162,6 +177,8 @@ async function promptUser(providedName?: string, options: CliOptions = {}): Prom
     ]);
     primitives = answer.primitives;
   }
+
+  primitives = validateExperimentalPrimitives(experimental, primitives || []);
 
   let framework = frameworkFlag;
   if (!framework) {
@@ -211,6 +228,22 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
   const { projectName, framework, primitives, packageManager } = answers;
   const targetDir = join(process.cwd(), projectName);
   const hasPrimitives = primitives.length > 0;
+
+  if (hasPrimitives) {
+    console.log(
+      chalk.yellow(
+        'Experimental primitives require a Bedrock-compatible local or AlphaNet network; standard Testnet and Devnet may reject these transactions.\n',
+      ),
+    );
+    // Check Bedrock before creating the target directory. If installation is
+    // declined or fails, the user can rerun without an existing partial tree.
+    const bedrockReady = await ensureBedrock();
+    if (!bedrockReady) {
+      throw new CliError(
+        'Bedrock CLI is required for experimental primitives. Install it and rerun create-xrp; no project directory was created.',
+      );
+    }
+  }
 
   console.log(chalk.cyan(`\nCreating project in ${chalk.bold(targetDir)}\n`));
   if (hasPrimitives) {
@@ -286,6 +319,10 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
     if (existsSync(staticBedrockDir)) {
       rmSync(staticBedrockDir, { recursive: true, force: true });
     }
+
+    // The source workspace may use a package-specific build task to package
+    // this CLI. The generated project no longer contains that package.
+    removeCreateXrpTurboTask(targetDir);
 
     // Remove interaction components for primitives NOT selected
     const componentMap: Record<Primitive, string> = {
@@ -415,17 +452,6 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
 
   // Initialize Bedrock project if primitives selected
   if (hasPrimitives) {
-    console.log(
-      chalk.yellow(
-        'Experimental primitives require a Bedrock-compatible local or AlphaNet network; standard Testnet and Devnet may reject these transactions.\n',
-      ),
-    );
-    const bedrockReady = await ensureBedrock();
-    if (!bedrockReady) {
-      throw new CliError(
-        'Bedrock CLI is required for experimental primitives. Install it and rerun create-xrp.',
-      );
-    }
     const initialized = initBedrockProject(targetDir, primitives);
     if (!initialized) {
       throw new CliError('Bedrock project setup failed. The project was not created successfully.');
@@ -468,7 +494,8 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
     }
   }
 
-  // Initialize git
+  // Initialize git when possible. Git metadata is useful but project creation
+  // must continue when git is unavailable or the user's identity is unset.
   const gitSpinner = ora('Initializing git repository...').start();
   try {
     execFileSync('git', ['init'], { cwd: targetDir, stdio: 'pipe' });
@@ -476,9 +503,12 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
     execFileSync('git', ['commit', '-m', 'Initial commit from create-xrp'], { cwd: targetDir, stdio: 'pipe' });
     gitSpinner.succeed('Git repository initialized');
   } catch (error) {
-    gitSpinner.fail('Failed to initialize git');
-    throw new CliError(
-      `Failed to initialize git: ${error instanceof Error ? error.message : String(error)}`,
+    gitSpinner.warn('Git setup skipped; project files are ready');
+    console.warn(
+      chalk.yellow(
+        `Git setup could not complete: ${error instanceof Error ? error.message : String(error)}. ` +
+          `Configure Git and run "cd ${projectName} && git add . && git commit" when ready.\n`,
+      ),
     );
   }
 
@@ -487,6 +517,9 @@ async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstal
   console.log(chalk.cyan('Next steps:\n'));
   console.log(chalk.white(`  cd ${projectName}`));
   const devCommand = packageManager === 'npm' ? 'npm run' : packageManager;
+  if (skipInstall) {
+    console.log(chalk.white(`  ${packageManager} install`));
+  }
   console.log(chalk.white(`  ${devCommand} dev\n`));
   console.log(chalk.gray('Your app will be running at http://localhost:3000\n'));
 

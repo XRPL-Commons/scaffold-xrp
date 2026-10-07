@@ -55,3 +55,22 @@ export function hasAllNonInteractiveOptions(
 ): boolean {
   return Boolean(projectName && options.framework && options.pm);
 }
+
+export function shouldPromptExperimental(
+  projectName: string | undefined,
+  options: CliOptions,
+): boolean {
+  return options.experimental === undefined && !hasAllNonInteractiveOptions(projectName, options);
+}
+
+export function validateExperimentalPrimitives(
+  experimental: boolean,
+  primitives: Primitive[],
+): Primitive[] {
+  if (experimental && primitives.length === 0) {
+    throw new CliError(
+      'Select at least one experimental primitive, or answer no to experimental features.',
+    );
+  }
+  return primitives;
+}
