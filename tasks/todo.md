@@ -58,3 +58,12 @@ Fresh Next and Nuxt projects now install through the CLI with pnpm 11.22.0 and p
 Manual developer-experience review takes priority: finish and verify the local CLI, then wait for user feedback before further pushes or CI runs.
 
 Local TypeScript verification: CLI tests (8) and type check passed. Generated default Next starter using pnpm 11.22.0 passed type check, lint, payment tests (11), and production build. Generated experimental Next starter using pnpm 10.34.6 and actual Bedrock initialization passed type check, lint, and production build. The rebuilt local CLI is ready at `packages/create-xrp/dist/index.js`; the default manual-test project is `/tmp/xrp-cli-testing/typescript-next`. No additional CI was triggered and no post-review changes were pushed.
+
+## Clean starter canvas
+
+- [x] Match the supplied reference with a spacious header, short introduction, account/payment cards, and restrained footer in Next and Nuxt.
+- [x] Remove repeated connection/setup guidance and keep the destination tag in an accessible disclosure without changing payment validation.
+- [x] Share the app layout with CLI-generated pages so default and experimental templates stay consistent.
+- [x] Verify locally and rebuild the CLI for manual review; do not push or trigger CI.
+
+Clean-canvas review: removed visible network labels from both headers while retaining accessible names. Next and Nuxt lint, type checks, and production builds pass; existing Next payment tests (11) and CLI tests (8) pass. Default and all seven experimental component combinations compile as generated TSX/Vue templates. Both preview servers return HTTP 200; Next HTML confirms no repeated onboarding panel or hosted-wallet setup disclosure. No browser connection is available for interactive visual verification. Local production previews run on ports 3100 (Next) and 3101 (Nuxt); pushes and CI remain held for manual review.

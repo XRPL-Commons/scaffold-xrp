@@ -113,9 +113,9 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <section class="rounded-xl border bg-card p-6 text-card-foreground shadow-sm md:p-8">
+  <section class="min-w-0 rounded-xl border bg-card p-6 text-card-foreground shadow-sm md:p-8">
     <div class="space-y-1">
-      <h2 class="text-lg font-semibold tracking-tight">Send XRP</h2>
+      <h2 class="text-xl font-semibold tracking-tight">Send XRP</h2>
       <p class="text-sm text-muted-foreground">Send XRP on {{ selectedNetwork.name }}.</p>
     </div>
 
@@ -137,10 +137,11 @@ async function handleSubmit() {
           <input
             id="destination"
             v-model="destination"
+            :disabled="isSubmitting"
             type="text"
             autocomplete="off"
-            placeholder="rN7n7otQDd6FczFgLdlqtyMVrn3HMfXoQT"
-            class="flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            placeholder="r…"
+            class="flex h-12 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             required
           >
         </div>
@@ -151,12 +152,13 @@ async function handleSubmit() {
             <input
               id="amountXrp"
               v-model="amountXrp"
+              :disabled="isSubmitting"
               type="text"
               inputmode="decimal"
               autocomplete="off"
               placeholder="1.5"
               aria-describedby="amount-help"
-              class="flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 pr-16 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              class="flex h-12 w-full rounded-lg border border-input bg-transparent px-3 py-1 pr-16 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               required
             >
             <span
@@ -198,13 +200,15 @@ async function handleSubmit() {
             <input
               id="destinationTag"
               v-model="destinationTag"
+              :disabled="isSubmitting"
+              aria-describedby="destination-tag-help"
               type="text"
               inputmode="numeric"
               autocomplete="off"
               placeholder="e.g. 12345"
-              class="flex h-12 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              class="flex h-12 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-            <p class="text-xs text-muted-foreground">
+            <p id="destination-tag-help" class="text-xs text-muted-foreground">
               Include the tag if the recipient requires one.
             </p>
           </div>
@@ -213,7 +217,7 @@ async function handleSubmit() {
         <button
           type="submit"
           :disabled="!connected || connecting || networkMismatch || isSubmitting"
-          class="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+          class="inline-flex h-12 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"
         >
           {{ isSubmitting ? 'Waiting for wallet…' : 'Sign & submit payment' }}
         </button>

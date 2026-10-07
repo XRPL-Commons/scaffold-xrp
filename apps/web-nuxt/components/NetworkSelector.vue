@@ -42,10 +42,9 @@ async function handleNetworkChange(event: Event) {
 </script>
 
 <template>
-  <label class="inline-flex items-center">
     <select
       aria-label="XRPL network"
-      class="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+      class="h-10 rounded-lg border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
       :value="selectedNetwork.id"
       :disabled="isSwitching"
       @change="handleNetworkChange"
@@ -54,5 +53,4 @@ async function handleNetworkChange(event: Event) {
         {{ network.name }}
       </option>
     </select>
-  </label>
 </template>

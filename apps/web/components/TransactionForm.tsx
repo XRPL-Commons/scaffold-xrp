@@ -1,26 +1,18 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent } from "react";
-import {
-  useSigner,
-  useWallet as useBindingWallet,
-  useWalletModal,
-} from "@xrpl-commons/xrpl-connect-react";
+import { useRef, useState, type FormEvent } from "react";
+import { useSigner, useWallet as useBindingWallet } from "@xrpl-commons/xrpl-connect-react";
 import { isWalletError, WalletErrorCode } from "xrpl-connect";
 import { isValidClassicAddress } from "xrpl";
 import { useWallet } from "./providers/WalletProvider";
-import {
-  buildPaymentTransaction,
-  normalizeSubmittedPaymentResult,
-  parseXrpAmount,
-} from "../lib/payment";
+import { buildPaymentTransaction, normalizeSubmittedPaymentResult } from "../lib/payment";
 import type { NormalizedPaymentResult } from "../lib/payment";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { CheckCircle2, Info, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, XCircle } from "lucide-react";
 
 type PaymentFormResult =
   | NormalizedPaymentResult
@@ -43,7 +35,6 @@ function isCancelledWalletAction(error: unknown): boolean {
 export function TransactionForm() {
   const { connected, account, connecting } = useBindingWallet();
   const { signAndSubmit } = useSigner();
-  const { ready, open } = useWalletModal();
   const { selectedNetwork, addEvent, showStatus } = useWallet();
   const [destination, setDestination] = useState("");
   const [amountXrp, setAmountXrp] = useState("");
@@ -52,14 +43,7 @@ export function TransactionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
-  const dropsPreview = useMemo(() => {
-    if (!amountXrp.trim()) return null;
-    try {
-      return parseXrpAmount(amountXrp);
-    } catch {
-      return null;
-    }
-  }, [amountXrp]);
+  const networkMismatch = Boolean(account && account.network.id !== selectedNetwork.id);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -121,49 +105,24 @@ export function TransactionForm() {
     }
   };
 
-  const handleConnect = async () => {
-    try {
-      await open();
-    } catch (error) {
-      showStatus(`Wallet connection failed: ${getErrorMessage(error)}`, "error");
-    }
-  };
-
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Send XRP</CardTitle>
-        <CardDescription>
-          Send XRP on {selectedNetwork.name}. Amounts are converted to drops exactly.
-        </CardDescription>
+    <Card className="min-w-0 rounded-xl">
+      <CardHeader className="p-6 pb-6 md:p-8 md:pb-6">
+        <CardTitle className="text-xl">Send XRP</CardTitle>
+        <CardDescription>Send XRP on {selectedNetwork.name}.</CardDescription>
       </CardHeader>
 
-      <CardContent>
-        {!connected && (
-          <Alert className="mb-4">
-            <Info className="h-4 w-4" />
-            <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-              <span>Connect a wallet to sign this payment.</span>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => void handleConnect()}
-                disabled={!ready || connecting}
-              >
-                {connecting ? "Connecting…" : "Connect wallet"}
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <CardContent className="p-6 pt-0 md:p-8 md:pt-0">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="destination">Destination address</Label>
             <Input
               id="destination"
               type="text"
               autoComplete="off"
-              placeholder="rN7n7otQDd6FczFgLdlqtyMVrn3HMfXoQT"
+              placeholder="r…"
+              className="h-12 rounded-lg text-base"
+              disabled={isSubmitting}
               value={destination}
               onChange={(event) => setDestination(event.target.value)}
               required
@@ -171,44 +130,68 @@ export function TransactionForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="destinationTag">Destination tag (optional)</Label>
-            <Input
-              id="destinationTag"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder="e.g. 12345"
-              value={destinationTag}
-              onChange={(event) => setDestinationTag(event.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Include a tag when the recipient provides one, such as an exchange deposit.
+            <Label htmlFor="amountXrp">Amount (XRP)</Label>
+            <div className="relative">
+              <Input
+                id="amountXrp"
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="1.5"
+                className="h-12 rounded-lg pr-16 text-base"
+                value={amountXrp}
+                onChange={(event) => setAmountXrp(event.target.value)}
+                aria-describedby="amount-help"
+                disabled={isSubmitting}
+                required
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-muted-foreground"
+              >
+                XRP
+              </span>
+            </div>
+            <p id="amount-help" className="text-xs text-muted-foreground">
+              Up to six decimal places.
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="amountXrp">Amount (XRP)</Label>
-            <Input
-              id="amountXrp"
-              type="text"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="1.5"
-              value={amountXrp}
-              onChange={(event) => setAmountXrp(event.target.value)}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              {dropsPreview
-                ? `${dropsPreview} drops (1 XRP = 1,000,000 drops)`
-                : "Up to six decimal places; 1 XRP = 1,000,000 drops."}
-            </p>
-          </div>
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+              <ChevronDown
+                className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              />
+              {destinationTag.trim() ? `Destination tag: ${destinationTag}` : "Add destination tag"}
+              {!destinationTag.trim() && (
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              )}
+            </summary>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="destinationTag">Destination tag</Label>
+              <Input
+                id="destinationTag"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="e.g. 12345"
+                className="h-12 rounded-lg text-base"
+                value={destinationTag}
+                onChange={(event) => setDestinationTag(event.target.value)}
+                aria-describedby="destination-tag-help"
+                disabled={isSubmitting}
+              />
+              <p id="destination-tag-help" className="text-xs text-muted-foreground">
+                Include the tag if the recipient requires one.
+              </p>
+            </div>
+          </details>
 
           <Button
             type="submit"
-            disabled={!connected || connecting || isSubmitting}
-            className="w-full"
+            disabled={!connected || connecting || networkMismatch || isSubmitting}
+            className="h-12 w-full rounded-lg disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none"
           >
             {isSubmitting ? "Waiting for wallet…" : "Sign & submit payment"}
           </Button>
@@ -216,7 +199,7 @@ export function TransactionForm() {
 
         {result ? (
           result.status === "submitted" || result.status === "validated" ? (
-            <Alert variant="success" className="mt-4">
+            <Alert variant="success" className="mt-4" role="status">
               <CheckCircle2 className="h-4 w-4" />
               <AlertTitle>
                 {result.status === "validated" ? "Payment validated" : "Payment submitted"}
@@ -235,6 +218,7 @@ export function TransactionForm() {
             <Alert
               variant={result.status === "cancelled" ? "warning" : "destructive"}
               className="mt-4"
+              role="alert"
             >
               <XCircle className="h-4 w-4" />
               <AlertTitle>

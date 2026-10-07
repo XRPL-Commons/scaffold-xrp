@@ -15,12 +15,12 @@ withDefaults(
 
     <main class="flex-1">
       <div class="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 md:py-16">
-        <section class="mb-10 max-w-3xl">
-          <p class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-xrpl">
+        <section class="mb-10 max-w-2xl">
+          <p class="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             Build on the XRPL
           </p>
-          <h1 class="text-4xl font-semibold tracking-tight md:text-5xl">Scaffold-XRP</h1>
-          <p v-if="subtitle" class="mt-4 text-lg text-muted-foreground">
+          <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl">Scaffold-XRP</h1>
+          <p v-if="subtitle" class="mt-4 text-lg leading-relaxed text-muted-foreground">
             {{ subtitle }}
           </p>
         </section>
@@ -29,18 +29,18 @@ withDefaults(
           <slot />
         </div>
 
-        <div v-if="$slots.experimental" class="mt-8">
+        <div v-if="$slots.experimental" class="mt-6 grid gap-6 md:grid-cols-2">
           <slot name="experimental" />
         </div>
       </div>
     </main>
 
-    <footer class="mt-16 border-t">
+    <footer class="mx-auto mt-12 w-full max-w-6xl px-4 sm:px-6">
       <div
-        class="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6"
+        class="flex flex-wrap items-center justify-between gap-4 border-t py-6 text-xs text-muted-foreground"
       >
-        <span class="font-medium text-foreground">Scaffold-XRP</span>
-        <nav aria-label="Footer" class="flex items-center gap-5">
+        <span>Scaffold-XRP</span>
+        <nav aria-label="Resources" class="flex items-center gap-5">
           <a
             href="https://github.com/XRPL-Commons/scaffold-xrp#readme"
             target="_blank"

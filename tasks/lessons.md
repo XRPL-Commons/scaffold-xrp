@@ -11,3 +11,7 @@
 - Use TypeScript for the Next starter, including generated pages and application helpers; validate generated output with a type-check command.
 
 - Let the user validate the generated developer experience before pushing further changes or triggering CI when they request that sequence. Keep fixes and verification local until their feedback.
+
+- Treat the starter as a clean canvas: keep one clear wallet connection entry point, move setup instructions to the README, and avoid repeating onboarding text across cards.
+
+- Show the network selector without a repeated visible “Network” label; retain its accessible name for screen readers.

@@ -18,7 +18,7 @@ const statusTone = computed(() => {
 <template>
   <header class="w-full">
     <div
-      class="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-4 px-4 py-5 sm:px-6 md:py-6"
+      class="mx-auto flex min-h-24 w-full max-w-6xl flex-wrap items-center gap-4 px-4 py-5 sm:px-6"
     >
       <NuxtLink to="/" class="flex items-center gap-3" aria-label="Scaffold-XRP home">
         <span

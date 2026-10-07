@@ -81,11 +81,6 @@ const NetworkSelectionContext = createContext<NetworkSelectionValue | undefined>
 const xamanApiKey = process.env.NEXT_PUBLIC_XAMAN_API_KEY?.trim() || "";
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim() || "";
 
-export const WALLET_CONFIGURATION = Object.freeze({
-  xamanConfigured: Boolean(xamanApiKey),
-  walletConnectConfigured: Boolean(walletConnectProjectId),
-});
-
 function createWalletConfig(networkId: NetworkId): XrplConnectConfig {
   return {
     adapters: [

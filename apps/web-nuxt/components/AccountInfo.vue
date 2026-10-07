@@ -6,9 +6,9 @@ const { selectedNetwork } = useNetworkSelection()
 </script>
 
 <template>
-  <section class="rounded-xl border bg-card p-6 text-card-foreground shadow-sm md:p-8">
+  <section class="min-w-0 rounded-xl border bg-card p-6 text-card-foreground shadow-sm md:p-8">
     <div class="space-y-1">
-      <h2 class="text-lg font-semibold tracking-tight">Account</h2>
+      <h2 class="text-xl font-semibold tracking-tight">Account</h2>
       <p class="text-sm text-muted-foreground">
         {{ connected ? 'Your connected wallet.' : 'Your connected wallet will appear here.' }}
       </p>

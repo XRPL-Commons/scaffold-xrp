@@ -8,26 +8,21 @@ export function NetworkSelector() {
   const selectedNetworkId = selectedNetwork.id;
 
   return (
-    <label className="flex items-center gap-2 text-xs text-muted-foreground">
-      <span>Network</span>
-      <select
-        aria-label="XRPL network"
-        className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        value={selectedNetworkId}
-        disabled={networkSwitching}
-        onChange={(event) => {
-          const nextNetwork = SUPPORTED_NETWORKS.find(
-            (network) => network.id === event.target.value
-          );
-          if (nextNetwork) void selectNetwork(nextNetwork.id);
-        }}
-      >
-        {SUPPORTED_NETWORKS.map((network) => (
-          <option key={network.id} value={network.id}>
-            {network.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      aria-label="XRPL network"
+      className="h-10 rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      value={selectedNetworkId}
+      disabled={networkSwitching}
+      onChange={(event) => {
+        const nextNetwork = SUPPORTED_NETWORKS.find((network) => network.id === event.target.value);
+        if (nextNetwork) void selectNetwork(nextNetwork.id);
+      }}
+    >
+      {SUPPORTED_NETWORKS.map((network) => (
+        <option key={network.id} value={network.id}>
+          {network.name}
+        </option>
+      ))}
+    </select>
   );
 }
