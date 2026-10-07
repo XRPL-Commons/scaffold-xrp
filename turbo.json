@@ -9,6 +9,16 @@
     "lint": {
       "dependsOn": ["^lint"]
     },
+    "type-check": {
+      "dependsOn": ["^type-check"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "create-xrp#build": {
+      "inputs": ["$TURBO_DEFAULT$", "../../apps/**", "../../package.json", "../../pnpm-workspace.yaml", "../../turbo.json", "../../.gitignore", "../../LICENSE"],
+      "outputs": ["dist/**", "templates/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

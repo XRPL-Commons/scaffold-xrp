@@ -10,7 +10,10 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
+    "type-check": "turbo type-check",
+    "test": "turbo test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
@@ -18,25 +21,8 @@
     "turbo": "^2.10.7"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "node": "^22.18.0 || >=24.11.0",
+    "pnpm": ">=10.0.0"
   },
-  "packageManager": "pnpm@8.10.0",
-  "pnpm": {
-    "overrides": {
-      "next@>=13.4.0 <14.1.1": ">=14.1.1",
-      "next@>=14.0.0 <14.2.10": ">=14.2.10",
-      "next@>=10.0.0 <14.2.7": ">=14.2.7",
-      "next@>=14.0.0 <14.2.21": ">=14.2.21",
-      "next@>=13.0 <14.2.30": ">=14.2.30",
-      "next@>=0.9.9 <14.2.31": ">=14.2.31",
-      "next@>=9.5.5 <14.2.15": ">=14.2.15",
-      "next@>=0.9.9 <14.2.32": ">=14.2.32",
-      "next@>=0.9.9 <14.2.24": ">=14.2.24",
-      "next@>=14.0.0 <14.2.25": ">=14.2.25",
-      "shell-quote": ">=1.8.4",
-      "tar": ">=7.5.19",
-      "seroval": ">=1.5.3"
-    }
-  }
+  "packageManager": "pnpm@10.34.6"
 }
