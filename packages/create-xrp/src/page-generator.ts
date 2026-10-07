@@ -68,11 +68,6 @@ export function generateNextJsPage(primitives: Primitive[]): string {
   imports.push('import { TransactionForm } from "../components/TransactionForm";');
   components.push('<TransactionForm />');
 
-  if (primitives.includes('contract')) {
-    imports.push('import { MPTokenCard } from "../components/MPTokenCard";');
-    components.push('<MPTokenCard />');
-  }
-
   const steps = buildGettingStartedSteps(primitives);
   const stepsJsx = steps
     .map((s) => `              <li>${s}</li>`)
@@ -126,8 +121,6 @@ ${stepsJsx}
 
 export function generateNuxtPage(primitives: Primitive[]): string {
   // Nuxt auto-imports components, so no explicit imports needed.
-  // Note: MPTokenCard is not included here because the Nuxt template
-  // does not ship MPToken*.vue components (Next.js only).
   const components: string[] = ['<AccountInfo />'];
 
   for (const p of primitives) {

@@ -19,8 +19,15 @@ import { removeCommand } from './commands/remove.js';
 import { ensureBedrock, initBedrockProject } from './bedrock.js';
 import { generateNextJsPage, generateNuxtPage } from './page-generator.js';
 import { updateXrplDependencies } from './dependencies.js';
-
-const ALL_PRIMITIVES: Primitive[] = ['contract', 'vault', 'escrow'];
+import { copyBundledTemplate } from './template.js';
+import { writeProjectDocumentation } from './project-docs.js';
+import {
+  hasAllNonInteractiveOptions,
+  parseFramework,
+  parsePackageManager,
+  parsePrimitives,
+  type CliOptions,
+} from './options.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,16 +47,19 @@ async function main() {
     .option('-m, --modules <modules>', 'Comma-separated list of modules to install')
     .option('--framework <framework>', 'Framework to use (nextjs or nuxt)')
     .option('--pm <packageManager>', 'Package manager to use (pnpm, npm, or yarn)')
-    .option('-p, --primitives <primitives>', 'Comma-separated primitives (contract,vault,escrow)')
-    .action(async (projectName?: string, options?: { modules?: string; framework?: string; pm?: string; primitives?: string }) => {
+    .option('--experimental', 'Enable experimental contract, vault, and escrow features')
+    .option('--no-experimental', 'Disable experimental contract, vault, and escrow features')
+    .option('-p, --primitives <primitives>', 'Comma-separated experimental primitives (contract,vault,escrow)')
+    .option('--skip-install', 'Skip dependency installation')
+    .action(async (projectName?: string, options?: CliOptions) => {
       // If no project name and no subcommand, show welcome and prompt
       if (!projectName && !options?.modules) {
         console.log(chalk.cyan.bold('\nWelcome to Scaffold-XRP!\n'));
-        console.log(chalk.gray('Create a dApp for XRPL with smart contracts\n'));
+        console.log(chalk.gray('Create a dApp for the XRP Ledger\n'));
       }
 
       const answers = await promptUser(projectName, options);
-      await scaffoldProject(answers, options?.modules);
+      await scaffoldProject(answers, options?.modules, options?.skipInstall);
     });
 
   // Add module command
@@ -82,111 +92,122 @@ async function main() {
   await program.parseAsync(process.argv);
 }
 
-async function promptUser(
-  providedName?: string,
-  options?: { framework?: string; pm?: string; primitives?: string }
-): Promise<Answers> {
-  const questions = [];
+async function promptUser(providedName?: string, options: CliOptions = {}): Promise<Answers> {
+  const frameworkFlag = parseFramework(options.framework);
+  const packageManagerFlag = parsePackageManager(options.pm);
+  const primitiveFlag = parsePrimitives(options.primitives, options.experimental === true);
 
-  if (!providedName) {
-    questions.push({
-      type: 'input',
-      name: 'projectName',
-      message: 'What is your project name?',
-      default: 'my-xrp-app',
-      validate: (input: string) => {
-        const validation = validateProjectName(input);
-        if (!validation.validForNewPackages) {
-          return validation.errors?.[0] || 'Invalid project name';
-        }
-        if (existsSync(input)) {
-          return `Directory "${input}" already exists. Please choose a different name.`;
-        }
-        return true;
+  let projectName = providedName;
+  if (!projectName) {
+    const answer = await inquirer.prompt<{ projectName: string }>([
+      {
+        type: 'input',
+        name: 'projectName',
+        message: 'What is your project name?',
+        default: 'my-xrp-app',
+        validate: (input: string) => {
+          const validation = validateProjectName(input);
+          if (!validation.validForNewPackages) {
+            return validation.errors?.[0] || 'Invalid project name';
+          }
+          if (existsSync(input)) {
+            return `Directory "${input}" already exists. Please choose a different name.`;
+          }
+          return true;
+        },
       },
-    });
-  } else {
-    const validation = validateProjectName(providedName);
-    if (!validation.validForNewPackages) {
-      const errorMsg = validation.errors?.[0] || validation.warnings?.[0] || 'Invalid package name';
-      console.log(chalk.red(`\nInvalid project name: ${errorMsg}\n`));
-      console.log(chalk.gray('Package names must be lowercase and can only contain letters, numbers, and hyphens.\n'));
-      process.exit(1);
-    }
-    if (existsSync(providedName)) {
-      console.log(chalk.red(`\nDirectory "${providedName}" already exists.\n`));
-      process.exit(1);
-    }
+    ]);
+    projectName = answer.projectName;
   }
 
-  // Framework selection
-  if (options?.framework && ['nextjs', 'nuxt'].includes(options.framework)) {
-    // Use provided framework
-  } else {
-    questions.push({
-      type: 'list',
-      name: 'framework',
-      message: 'Which framework do you want to use?',
-      choices: [
-        { name: 'Next.js (React)', value: 'nextjs' },
-        { name: 'Nuxt (Vue)', value: 'nuxt' },
-      ],
-      default: 'nextjs',
-    });
+  const validation = validateProjectName(projectName);
+  if (!validation.validForNewPackages) {
+    const errorMsg = validation.errors?.[0] || validation.warnings?.[0] || 'Invalid package name';
+    throw new CliError(`Invalid project name: ${errorMsg}`);
+  }
+  if (existsSync(projectName)) {
+    throw new CliError(`Directory "${projectName}" already exists.`);
   }
 
-  // Primitives selection (unless provided via CLI flag)
-  let parsedPrimitives: Primitive[] | undefined;
-  if (options?.primitives) {
-    const raw = options.primitives.split(',').map((p) => p.trim()).filter(Boolean);
-    const invalid = raw.filter((p) => !ALL_PRIMITIVES.includes(p as Primitive));
-    if (invalid.length > 0) {
-      console.log(chalk.red(`\nUnknown primitives: ${invalid.join(', ')}`));
-      console.log(chalk.gray(`Valid primitives: ${ALL_PRIMITIVES.join(', ')}\n`));
-      process.exit(1);
-    }
-    parsedPrimitives = raw.filter((p): p is Primitive => ALL_PRIMITIVES.includes(p as Primitive));
-  } else {
-    questions.push({
-      type: 'checkbox',
-      name: 'primitives',
-      message: 'Which XRPL primitives do you want to include?',
-      choices: [
-        { name: 'Smart Contract  — programmable on-chain logic', value: 'contract' },
-        { name: 'Smart Vault     — programmable deposit/withdraw', value: 'vault' },
-        { name: 'Smart Escrow    — conditional fund release', value: 'escrow' },
-      ],
-    });
+  let experimental = options.experimental === true;
+  if (!options.experimental && !hasAllNonInteractiveOptions(projectName, options)) {
+    const answer = await inquirer.prompt<{ experimental: boolean }>([
+      {
+        type: 'confirm',
+        name: 'experimental',
+        message: 'Use experimental features?',
+        default: false,
+      },
+    ]);
+    experimental = answer.experimental;
   }
 
-  // Package manager selection
-  if (options?.pm && ['pnpm', 'npm', 'yarn'].includes(options.pm)) {
-    // Use provided package manager
-  } else {
-    questions.push({
-      type: 'list',
-      name: 'packageManager',
-      message: 'Which package manager do you want to use?',
-      choices: [
-        { name: 'pnpm (recommended)', value: 'pnpm' },
-        { name: 'npm', value: 'npm' },
-        { name: 'yarn', value: 'yarn' },
-      ],
-      default: 'pnpm',
-    });
+  if (experimental && primitiveFlag === undefined && hasAllNonInteractiveOptions(projectName, options) && !process.stdin.isTTY) {
+    throw new CliError('--experimental requires --primitives in non-interactive mode.');
   }
 
-  const answers = await inquirer.prompt<Partial<Answers>>(questions);
+  let primitives = primitiveFlag;
+  if (experimental && primitives === undefined) {
+    const answer = await inquirer.prompt<{ primitives: Primitive[] }>([
+      {
+        type: 'checkbox',
+        name: 'primitives',
+        message: 'Which experimental primitives do you want to include?',
+        choices: [
+          { name: 'Contract  — programmable on-chain logic', value: 'contract' },
+          { name: 'Vault     — programmable deposit/withdraw', value: 'vault' },
+          { name: 'Escrow    — programmable conditional release', value: 'escrow' },
+        ],
+      },
+    ]);
+    primitives = answer.primitives;
+  }
+
+  let framework = frameworkFlag;
+  if (!framework) {
+    const answer = await inquirer.prompt<{ framework: 'nextjs' | 'nuxt' }>([
+      {
+        type: 'list',
+        name: 'framework',
+        message: 'Which framework do you want to use?',
+        choices: [
+          { name: 'Next.js (React)', value: 'nextjs' },
+          { name: 'Nuxt (Vue)', value: 'nuxt' },
+        ],
+        default: 'nextjs',
+      },
+    ]);
+    framework = answer.framework;
+  }
+
+  let packageManager = packageManagerFlag;
+  if (!packageManager) {
+    const answer = await inquirer.prompt<{ packageManager: 'pnpm' | 'npm' | 'yarn' }>([
+      {
+        type: 'list',
+        name: 'packageManager',
+        message: 'Which package manager do you want to use?',
+        choices: [
+          { name: 'pnpm (recommended)', value: 'pnpm' },
+          { name: 'npm', value: 'npm' },
+          { name: 'yarn', value: 'yarn' },
+        ],
+        default: 'pnpm',
+      },
+    ]);
+    packageManager = answer.packageManager;
+  }
 
   return {
-    projectName: providedName || answers.projectName as string,
-    framework: (options?.framework as 'nextjs' | 'nuxt') || answers.framework as 'nextjs' | 'nuxt',
-    primitives: parsedPrimitives || (answers.primitives as Primitive[]) || [],
-    packageManager: (options?.pm as 'pnpm' | 'npm' | 'yarn') || answers.packageManager as 'pnpm' | 'npm' | 'yarn',
+    projectName,
+    framework,
+    experimental,
+    primitives: primitives || [],
+    packageManager,
   };
 }
 
-async function scaffoldProject(answers: Answers, modulesArg?: string) {
+async function scaffoldProject(answers: Answers, modulesArg?: string, skipInstall = false) {
   const { projectName, framework, primitives, packageManager } = answers;
   const targetDir = join(process.cwd(), projectName);
   const hasPrimitives = primitives.length > 0;
@@ -196,19 +217,16 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
     console.log(chalk.gray(`Primitives: ${primitives.join(', ')}\n`));
   }
 
-  // Clone the template
-  const cloneSpinner = ora('Cloning template...').start();
+  // Copy the immutable snapshot shipped in the CLI package.
+  const templateSpinner = ora('Copying bundled template...').start();
   try {
-    execFileSync(
-      'git',
-      ['clone', '--depth', '1', 'https://github.com/XRPL-Commons/scaffold-xrp.git', targetDir],
-      { stdio: 'pipe' }
-    );
-    cloneSpinner.succeed('Template cloned');
+    copyBundledTemplate(targetDir);
+    templateSpinner.succeed('Template copied');
   } catch (error) {
-    cloneSpinner.fail('Failed to clone template');
-    console.log(chalk.red('\nError cloning repository. Please check your internet connection.\n'));
-    process.exit(1);
+    templateSpinner.fail('Failed to copy bundled template');
+    throw error instanceof CliError
+      ? error
+      : new CliError(`Failed to copy bundled template: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // Clean up and set up project structure
@@ -283,8 +301,10 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
       }
     }
 
-    // Remove MPToken components when contract is not selected (Next.js only; no .vue equivalents exist)
-    if (!primitives.includes('contract') && framework === 'nextjs') {
+    // MPTokens are not part of the generated starter UI. Keep the feature out
+    // of both the conventional and experimental templates until it has a
+    // dedicated amendment/network opt-in flow.
+    if (framework === 'nextjs') {
       const mpComponents = ['MPTokenCard', 'MPTokenCreate', 'MPTokenTransfer', 'MPTokenAuthorize'];
       for (const comp of mpComponents) {
         const compPath = join(webDir, 'components', comp + '.js');
@@ -341,6 +361,9 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
       }
 
       const rootPkgPath = join(targetDir, 'package.json');
+      const rootPkg = existsSync(rootPkgPath)
+        ? JSON.parse(readFileSync(rootPkgPath, 'utf-8'))
+        : {};
       if (existsSync(rootPkgPath)) rmSync(rootPkgPath);
 
       const webContents = readdirSync(webDir);
@@ -357,25 +380,55 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
       if (existsSync(newPkgPath)) {
         const webPkg = JSON.parse(readFileSync(newPkgPath, 'utf-8'));
         webPkg.name = projectName;
+        if (packageManager === 'pnpm' && rootPkg.pnpm) {
+          webPkg.pnpm = rootPkg.pnpm;
+        }
         writeFileSync(newPkgPath, JSON.stringify(webPkg, null, 2) + '\n');
         updateXrplDependencies(newPkgPath, []);
+      }
+
+      // The source template intentionally ships without lockfiles. Remove any
+      // lockfile copied by a future template update before generating a fresh
+      // one with the selected package manager.
+      for (const lockfile of ['pnpm-lock.yaml', 'package-lock.json', 'yarn.lock']) {
+        const lockPath = join(targetDir, lockfile);
+        if (existsSync(lockPath)) rmSync(lockPath);
       }
     }
 
     cleanSpinner.succeed('Project set up');
   } catch (error) {
     cleanSpinner.fail('Failed to set up project');
-    console.log(chalk.yellow('\nWarning: Some setup steps failed\n'));
+    throw new CliError(
+      `Failed to set up project: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
+
+  writeProjectDocumentation({
+    projectDir: targetDir,
+    projectName,
+    framework,
+    packageManager,
+    primitives,
+    flattened: !hasPrimitives,
+  });
 
   // Initialize Bedrock project if primitives selected
   if (hasPrimitives) {
+    console.log(
+      chalk.yellow(
+        'Experimental primitives require a Bedrock-compatible local or AlphaNet network; standard Testnet and Devnet may reject these transactions.\n',
+      ),
+    );
     const bedrockReady = await ensureBedrock();
-    if (bedrockReady) {
-      const initialized = initBedrockProject(targetDir, primitives);
-      if (!initialized) {
-        console.log(chalk.yellow('\nBedrock project setup failed — you can retry manually after install.\n'));
-      }
+    if (!bedrockReady) {
+      throw new CliError(
+        'Bedrock CLI is required for experimental primitives. Install it and rerun create-xrp.',
+      );
+    }
+    const initialized = initBedrockProject(targetDir, primitives);
+    if (!initialized) {
+      throw new CliError('Bedrock project setup failed. The project was not created successfully.');
     }
   }
 
@@ -383,15 +436,20 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
   initScaffoldConfig(targetDir, framework, primitives);
 
   // Install dependencies
-  const installSpinner = ora(`Installing dependencies with ${packageManager}...`).start();
-  try {
-    const installArgs = packageManager === 'yarn' ? [] : ['install'];
-    execFileSync(packageManager, installArgs, { cwd: targetDir, stdio: 'pipe' });
-    installSpinner.succeed('Dependencies installed');
-  } catch (error) {
-    installSpinner.fail('Failed to install dependencies');
-    console.log(chalk.yellow('\nYou can install dependencies manually by running:'));
-    console.log(chalk.cyan(`   cd ${projectName} && ${packageManager} install\n`));
+  if (!skipInstall) {
+    const installSpinner = ora(`Installing dependencies with ${packageManager}...`).start();
+    try {
+      const installArgs = packageManager === 'yarn' ? [] : ['install'];
+      execFileSync(packageManager, installArgs, { cwd: targetDir, stdio: 'pipe' });
+      installSpinner.succeed('Dependencies installed');
+    } catch (error) {
+      installSpinner.fail('Failed to install dependencies');
+      throw new CliError(
+        `Failed to install dependencies with ${packageManager}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  } else {
+    console.log(chalk.gray('Skipping dependency installation (--skip-install).\n'));
   }
 
   // Install modules if specified
@@ -405,7 +463,7 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
         console.log(chalk.green(`\nInstalled modules: ${result.installed.join(', ')}`));
       }
       if (result.failed.length > 0) {
-        console.log(chalk.yellow(`\nFailed to install: ${result.failed.join(', ')}`));
+        throw new CliError(`Failed to install modules: ${result.failed.join(', ')}`);
       }
     }
   }
@@ -419,7 +477,9 @@ async function scaffoldProject(answers: Answers, modulesArg?: string) {
     gitSpinner.succeed('Git repository initialized');
   } catch (error) {
     gitSpinner.fail('Failed to initialize git');
-    console.log(chalk.yellow('\nYou can initialize git manually\n'));
+    throw new CliError(
+      `Failed to initialize git: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
   // Success message

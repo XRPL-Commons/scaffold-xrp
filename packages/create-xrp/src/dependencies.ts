@@ -2,13 +2,13 @@
  * Manage xrpl.js dependencies based on selected primitives.
  *
  *   any primitive → @xrpl-commons/xrpl ^4.6.0
- *   none          → xrpl ^3.1.0 (standard release)
+ *   none          → xrpl ^4.0.0 (standard release compatible with xrpl-connect v1)
  */
 
 import { readFileSync, writeFileSync } from 'fs';
 import type { Primitive } from './types.js';
 
-const XRPL_STANDARD = '^3.1.0';
+const XRPL_STANDARD = '^4.0.0';
 const XRPL_COMMONS = '^4.6.0';
 
 /**
