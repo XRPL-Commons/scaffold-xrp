@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { WalletManager } from 'xrpl-connect'
+
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const vaultId = ref('')
@@ -42,7 +44,9 @@ const handleSubmit = async () => {
       Fee: '1000000',
     }
 
-    const txResult = await walletManager.value.signAndSubmit(transaction as any)
+    const txResult = await walletManager.value.signAndSubmit(
+      transaction as unknown as Parameters<WalletManager['signAndSubmit']>[0],
+    )
 
     result.value = {
       success: true,

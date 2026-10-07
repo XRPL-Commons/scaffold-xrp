@@ -8,22 +8,29 @@
     "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "lint": "eslint ."
+    "lint": "nuxt prepare && eslint .",
+    "type-check": "nuxt typecheck",
+    "test": "node --test lib/payment.test.mjs"
   },
   "dependencies": {
+    "@xrpl-commons/xrpl-connect-vue": "1.0.0",
     "buffer": "^6.0.3",
     "events": "^3.3.0",
     "process": "^0.11.10",
-    "xrpl": "^3.0.0",
-    "xrpl-connect": "^0.7.1"
+    "xrpl": "3.1.0",
+    "xrpl-connect": "1.0.0"
   },
   "devDependencies": {
-    "@nuxt/eslint": "^0.7.0",
-    "@nuxtjs/tailwindcss": "^6.12.0",
-    "eslint": "^9.0.0",
-    "nuxt": "^3.14.0",
-    "typescript": "^5.3.3",
-    "vue": "^3.4.0",
-    "vue-router": "^4.2.0"
+    "@nuxt/eslint": "0.7.0",
+    "@nuxtjs/tailwindcss": "6.14.0",
+    "eslint": "9.39.4",
+    "nuxt": "3.21.11",
+    "typescript": "5.9.3",
+    "vue": "3.5.43",
+    "vue-router": "4.6.4",
+    "vue-tsc": "3.3.12"
+  },
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
   }
 }

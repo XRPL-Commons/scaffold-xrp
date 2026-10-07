@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { WalletManager } from 'xrpl-connect'
+
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const contractAddress = ref('')
@@ -53,7 +55,9 @@ const handleCallContract = async () => {
       transaction.FunctionArguments = stringToHex(functionArgs.value)
     }
 
-    const txResult = await walletManager.value.signAndSubmit(transaction as any)
+    const txResult = await walletManager.value.signAndSubmit(
+      transaction as unknown as Parameters<WalletManager['signAndSubmit']>[0],
+    )
 
     callResult.value = {
       success: true,
@@ -63,12 +67,13 @@ const handleCallContract = async () => {
 
     showStatus('Contract called successfully!', 'success')
     addEvent('Contract Called', txResult)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
     callResult.value = {
       success: false,
-      error: error.message,
+      error: message,
     }
-    showStatus(`Contract call failed: ${error.message}`, 'error')
+    showStatus(`Contract call failed: ${message}`, 'error')
     addEvent('Contract Call Failed', error)
   } finally {
     isCalling.value = false

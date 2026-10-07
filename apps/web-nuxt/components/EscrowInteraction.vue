@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { WalletManager } from 'xrpl-connect'
+
 const RIPPLE_EPOCH_OFFSET = 946684800
 
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
@@ -91,7 +93,9 @@ const handleSubmit = async () => {
       }
     }
 
-    const txResult = await walletManager.value.signAndSubmit(transaction as any)
+    const txResult = await walletManager.value.signAndSubmit(
+      transaction as unknown as Parameters<WalletManager['signAndSubmit']>[0],
+    )
 
     result.value = {
       success: true,
@@ -119,7 +123,7 @@ const handleSubmit = async () => {
   <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
     <div class="p-6 pb-3">
       <h3 class="text-base font-semibold leading-none tracking-tight">Escrow Interaction</h3>
-      <p class="text-sm text-muted-foreground">Create and manage smart escrows</p>
+      <p class="text-sm text-muted-foreground">Create and manage XRPL escrows</p>
     </div>
 
     <div class="p-6 pt-0 space-y-4">
@@ -229,10 +233,10 @@ const handleSubmit = async () => {
       </template>
 
       <div class="rounded-md border p-3 text-sm">
-        <p class="font-medium mb-2">Smart Escrow Entry Point</p>
+        <p class="font-medium mb-2">XRPL Escrow Entry Point</p>
         <ul class="text-muted-foreground space-y-1 text-xs">
-          <li>finish() - WASM condition checked on EscrowFinish</li>
-          <li>Returns 1 to release funds, 0 to keep locked</li>
+          <li>Finish an escrow after its finish time has passed</li>
+          <li>Cancel an escrow after its cancel time has passed</li>
         </ul>
       </div>
 

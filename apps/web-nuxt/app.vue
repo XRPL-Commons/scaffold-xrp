@@ -1,10 +1,5 @@
-<script setup lang="ts">
-// Initialize wallet manager on app mount
-useWalletManager()
-</script>
-
 <template>
-  <div class="bg-gray-50 min-h-screen">
+  <div class="min-h-screen bg-background">
     <NuxtPage />
   </div>
 </template>
