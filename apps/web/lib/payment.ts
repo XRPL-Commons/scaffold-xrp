@@ -1,39 +1,54 @@
+import type { Payment } from "xrpl";
+
 export const DROPS_PER_XRP = 1_000_000n;
 export const MAX_XRP_DROPS = 100_000_000_000n * DROPS_PER_XRP;
 export const MAX_DESTINATION_TAG = 4_294_967_295n;
 const SUCCESS_RESULT = "TESSUCCESS";
 const QUEUED_RESULT = "TERQUEUED";
 
+export type PaymentInputErrorCode =
+  "INVALID_AMOUNT" | "INVALID_TAG" | "INVALID_DESTINATION" | "MISSING_ACCOUNT" | "NETWORK_MISMATCH";
+
 export class PaymentInputError extends Error {
-  constructor(code, message) {
+  readonly code: PaymentInputErrorCode;
+
+  constructor(code: PaymentInputErrorCode, message: string) {
     super(message);
     this.name = "PaymentInputError";
     this.code = code;
   }
 }
 
-function nonEmptyString(value) {
+function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
 
-function normalizedResultCode(value) {
+function normalizedResultCode(value: unknown): string | null {
   return nonEmptyString(value) ? value.trim() : null;
 }
 
-function responseVariants(result) {
-  const variants = [];
-  const pending = [{ value: result, depth: 0 }];
-  const seen = new Set();
+type ResultRecord = Record<string, unknown>;
+
+function isResultRecord(value: unknown): value is ResultRecord {
+  return typeof value === "object" && value !== null;
+}
+
+function responseVariants(result: unknown): ResultRecord[] {
+  const variants: ResultRecord[] = [];
+  const pending: Array<{ value: unknown; depth: number }> = [{ value: result, depth: 0 }];
+  const seen = new Set<ResultRecord>();
 
   while (pending.length > 0) {
-    const { value, depth } = pending.shift();
-    if (!value || typeof value !== "object" || seen.has(value)) continue;
+    const next = pending.shift();
+    if (!next || !isResultRecord(next.value)) continue;
+    const { value, depth } = next;
+    if (seen.has(value)) continue;
     seen.add(value);
     variants.push(value);
 
     if (depth >= 2) continue;
     for (const key of ["submitResult", "result", "tx_json"]) {
-      if (value[key] && typeof value[key] === "object") {
+      if (isResultRecord(value[key])) {
         pending.push({ value: value[key], depth: depth + 1 });
       }
     }
@@ -42,19 +57,23 @@ function responseVariants(result) {
   return variants;
 }
 
-function resultCodes(result) {
+function resultCodes(result: unknown): {
+  metaCodes: string[];
+  engineCodes: string[];
+  codes: string[];
+} {
   const variants = responseVariants(result);
   const metaCodes = variants
     .flatMap((variant) => [
-      variant?.meta?.TransactionResult,
+      isResultRecord(variant.meta) ? variant.meta.TransactionResult : undefined,
       variant?.TransactionResult,
     ])
     .map(normalizedResultCode)
-    .filter(Boolean);
+    .filter((code): code is string => code !== null);
   const engineCodes = variants
     .flatMap((variant) => [variant?.engine_result, variant?.engineResult])
     .map(normalizedResultCode)
-    .filter(Boolean);
+    .filter((code): code is string => code !== null);
 
   return { metaCodes, engineCodes, codes: [...metaCodes, ...engineCodes] };
 }
@@ -65,14 +84,33 @@ function resultCodes(result) {
  * validated metadata proves that the ledger accepted it. An engine result is
  * useful submission evidence, but it is not validation evidence by itself.
  */
-export function normalizeSubmittedPaymentResult(result) {
-  if (!result || typeof result !== "object") {
+export type NormalizedPaymentError = {
+  status: "error";
+  error: string;
+  hash?: string;
+  id?: string;
+  resultCode?: string;
+};
+
+export type NormalizedPaymentSubmission = {
+  status: "submitted" | "validated";
+  hash: string;
+  id?: string;
+  resultCode?: string;
+  error?: never;
+};
+
+export type NormalizedPaymentResult = NormalizedPaymentError | NormalizedPaymentSubmission;
+
+export function normalizeSubmittedPaymentResult(result: unknown): NormalizedPaymentResult {
+  if (!isResultRecord(result)) {
     return {
       status: "error",
       error: "Wallet returned no payment result.",
     };
   }
 
+  const resultId = nonEmptyString(result.id) ? result.id : undefined;
   const variants = responseVariants(result);
   const hash = variants.map((variant) => variant.hash).find(nonEmptyString);
   if (!hash) {
@@ -84,8 +122,7 @@ export function normalizeSubmittedPaymentResult(result) {
 
   const { metaCodes, codes } = resultCodes(result);
   const failureCode = codes.find(
-    (code) =>
-      code.toUpperCase() !== SUCCESS_RESULT && code.toUpperCase() !== QUEUED_RESULT
+    (code) => code.toUpperCase() !== SUCCESS_RESULT && code.toUpperCase() !== QUEUED_RESULT
   );
   if (failureCode) {
     const message = variants
@@ -94,31 +131,29 @@ export function normalizeSubmittedPaymentResult(result) {
     return {
       status: "error",
       hash,
-      id: result.id,
+      id: resultId,
       resultCode: failureCode,
       error: message || `Ledger rejected the payment (${failureCode}).`,
     };
   }
 
-  const explicitError = variants
-    .map((variant) => variant.error)
-    .find(nonEmptyString);
+  const explicitError = variants.map((variant) => variant.error).find(nonEmptyString);
   if (explicitError) {
     return {
       status: "error",
       hash,
-      id: result.id,
+      id: resultId,
       error: explicitError,
     };
   }
 
-  const validated = variants.some((variant) => variant.validated === true) && metaCodes.some(
-    (code) => code.toUpperCase() === SUCCESS_RESULT
-  );
+  const validated =
+    variants.some((variant) => variant.validated === true) &&
+    metaCodes.some((code) => code.toUpperCase() === SUCCESS_RESULT);
   return {
     status: validated ? "validated" : "submitted",
     hash,
-    id: result.id,
+    id: resultId,
     resultCode: codes[0],
   };
 }
@@ -128,7 +163,7 @@ export function normalizeSubmittedPaymentResult(result) {
  * number. XRPL Payment amounts are integer drops and accept at most six
  * decimal places of XRP.
  */
-export function parseXrpAmount(value) {
+export function parseXrpAmount(value: unknown): string {
   const input = String(value ?? "").trim();
   const match = /^(\d+)(?:\.(\d{1,6}))?$/.exec(input);
 
@@ -154,7 +189,7 @@ export function parseXrpAmount(value) {
   return drops.toString();
 }
 
-export function parseDestinationTag(value) {
+export function parseDestinationTag(value: unknown): number | undefined {
   const input = String(value ?? "").trim();
   if (input === "") return undefined;
 
@@ -164,13 +199,19 @@ export function parseDestinationTag(value) {
 
   const tag = BigInt(input);
   if (tag > MAX_DESTINATION_TAG) {
-    throw new PaymentInputError("INVALID_TAG", "Destination tag must be between 0 and 4,294,967,295.");
+    throw new PaymentInputError(
+      "INVALID_TAG",
+      "Destination tag must be between 0 and 4,294,967,295."
+    );
   }
 
   return Number(tag);
 }
 
-export function validateDestination(destination, isValidAddress) {
+export function validateDestination(
+  destination: unknown,
+  isValidAddress: (value: string) => boolean
+): string {
   const normalized = String(destination ?? "").trim();
   if (!normalized) {
     throw new PaymentInputError("INVALID_DESTINATION", "Enter a destination address.");
@@ -183,6 +224,16 @@ export function validateDestination(destination, isValidAddress) {
   return normalized;
 }
 
+export interface BuildPaymentTransactionInput {
+  accountAddress: unknown;
+  accountNetworkId?: string;
+  selectedNetworkId?: string;
+  destination: unknown;
+  amountXrp: unknown;
+  destinationTag?: unknown;
+  isValidAddress: (value: string) => boolean;
+}
+
 export function buildPaymentTransaction({
   accountAddress,
   accountNetworkId,
@@ -191,24 +242,20 @@ export function buildPaymentTransaction({
   amountXrp,
   destinationTag,
   isValidAddress,
-}) {
+}: BuildPaymentTransactionInput): Payment {
   const account = String(accountAddress ?? "").trim();
   if (!account) {
     throw new PaymentInputError("MISSING_ACCOUNT", "Connect a wallet before sending XRP.");
   }
 
-  if (
-    selectedNetworkId &&
-    accountNetworkId &&
-    selectedNetworkId !== accountNetworkId
-  ) {
+  if (selectedNetworkId && accountNetworkId && selectedNetworkId !== accountNetworkId) {
     throw new PaymentInputError(
       "NETWORK_MISMATCH",
       `Wallet is connected to ${accountNetworkId}; switch it to ${selectedNetworkId} before sending.`
     );
   }
 
-  const transaction = {
+  const transaction: Payment = {
     TransactionType: "Payment",
     Account: account,
     Destination: validateDestination(destination, isValidAddress),

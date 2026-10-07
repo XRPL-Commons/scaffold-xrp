@@ -52,8 +52,8 @@ export function MPTokenCard() {
             <Alert className="mt-4">
               <Info className="h-4 w-4" />
               <AlertDescription>
-                MPTokens require the MPTokensV1 amendment. Recipients must authorize the token
-                using MPTokenAuthorize before receiving transfers.
+                MPTokens require the MPTokensV1 amendment. Recipients must authorize the token using
+                MPTokenAuthorize before receiving transfers.
               </AlertDescription>
             </Alert>
           </>

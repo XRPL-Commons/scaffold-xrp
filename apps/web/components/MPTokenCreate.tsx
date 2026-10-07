@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useWallet } from "./providers/WalletProvider";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -9,22 +9,29 @@ import { Checkbox } from "./ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { stringToHex } from "../lib/utils";
+import type {
+  MPTokenIssuanceCreateTransaction,
+  TransactionFailureResult,
+  TransactionSuccessResult,
+} from "../lib/transactions";
 
 const MIN_ASSET_SCALE = 0;
 const MAX_ASSET_SCALE = 255;
 const FLAG_TRANSFERABLE = 0x20;
+type IssuanceResult =
+  (TransactionSuccessResult & { issuanceId: string }) | TransactionFailureResult;
 
 export function MPTokenCreate() {
-  const { walletManager, addEvent, showStatus } = useWallet();
+  const { walletManager, signAndSubmit, addEvent, showStatus } = useWallet();
 
   const [tokenName, setTokenName] = useState("");
   const [assetScale, setAssetScale] = useState("2");
   const [maxAmount, setMaxAmount] = useState("");
   const [canTransfer, setCanTransfer] = useState(true);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<IssuanceResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!walletManager || !walletManager.account) {
@@ -47,7 +54,7 @@ export function MPTokenCreate() {
         description: "MPToken created via Scaffold-XRP",
       });
 
-      const transaction = {
+      const transaction: MPTokenIssuanceCreateTransaction = {
         TransactionType: "MPTokenIssuanceCreate",
         Account: walletManager.account.address,
         AssetScale: scale,
@@ -59,11 +66,17 @@ export function MPTokenCreate() {
         transaction.MaximumAmount = maxAmount;
       }
 
-      const txResult = await walletManager.signAndSubmit(transaction);
+      const txResult = await signAndSubmit(transaction);
 
+      const resultPayload =
+        typeof txResult.result === "object" && txResult.result !== null
+          ? (txResult.result as Record<string, unknown>)
+          : null;
       const issuanceId =
-        txResult?.result?.mpt_issuance_id ||
-        txResult?.mpt_issuance_id ||
+        (typeof resultPayload?.mpt_issuance_id === "string"
+          ? resultPayload.mpt_issuance_id
+          : undefined) ??
+        (typeof txResult.mpt_issuance_id === "string" ? txResult.mpt_issuance_id : undefined) ??
         "Check transaction for ID";
 
       setResult({
@@ -79,8 +92,9 @@ export function MPTokenCreate() {
       setTokenName("");
       setMaxAmount("");
     } catch (error) {
-      setResult({ success: false, error: error.message });
-      showStatus(`Failed to create MPToken: ${error.message}`, "error");
+      const message = error instanceof Error ? error.message : String(error);
+      setResult({ success: false, error: message });
+      showStatus(`Failed to create MPToken: ${message}`, "error");
       addEvent("MPToken Create Failed", error);
     } finally {
       setIsSubmitting(false);
@@ -97,7 +111,7 @@ export function MPTokenCreate() {
             type="text"
             placeholder="My Token"
             value={tokenName}
-            onChange={(e) => setTokenName(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setTokenName(e.target.value)}
             required
           />
         </div>
@@ -111,7 +125,7 @@ export function MPTokenCreate() {
             min={MIN_ASSET_SCALE}
             max={MAX_ASSET_SCALE}
             value={assetScale}
-            onChange={(e) => setAssetScale(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setAssetScale(e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
             Number of decimal places (0-255). Default is 2.
@@ -125,7 +139,7 @@ export function MPTokenCreate() {
             type="text"
             placeholder="1000000"
             value={maxAmount}
-            onChange={(e) => setMaxAmount(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setMaxAmount(e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
             Maximum tokens that can be issued. Leave empty for no limit.
@@ -146,11 +160,7 @@ export function MPTokenCreate() {
 
       {result && (
         <Alert variant={result.success ? "success" : "destructive"} className="mt-4">
-          {result.success ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <XCircle className="h-4 w-4" />
-          )}
+          {result.success ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
           <AlertTitle>{result.success ? "MPToken Created" : "Creation Failed"}</AlertTitle>
           <AlertDescription>
             {result.success ? (

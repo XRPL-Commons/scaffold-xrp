@@ -1,22 +1,20 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   useSigner,
   useWallet as useBindingWallet,
   useWalletModal,
 } from "@xrpl-commons/xrpl-connect-react";
-import {
-  isWalletError,
-  WalletErrorCode,
-} from "xrpl-connect";
+import { isWalletError, WalletErrorCode } from "xrpl-connect";
 import { isValidClassicAddress } from "xrpl";
 import { useWallet } from "./providers/WalletProvider";
 import {
   buildPaymentTransaction,
   normalizeSubmittedPaymentResult,
   parseXrpAmount,
-} from "../lib/payment.mjs";
+} from "../lib/payment";
+import type { NormalizedPaymentResult } from "../lib/payment";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -24,16 +22,21 @@ import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, Info, XCircle } from "lucide-react";
 
-function getErrorMessage(error) {
+type PaymentFormResult =
+  | NormalizedPaymentResult
+  | {
+      status: "cancelled";
+      error: string;
+    };
+
+function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function isCancelledWalletAction(error) {
+function isCancelledWalletAction(error: unknown): boolean {
   return (
     isWalletError(error) &&
-    [WalletErrorCode.SIGN_REJECTED, WalletErrorCode.CONNECTION_REJECTED].includes(
-      error.code
-    )
+    [WalletErrorCode.SIGN_REJECTED, WalletErrorCode.CONNECTION_REJECTED].includes(error.code)
   );
 }
 
@@ -45,7 +48,7 @@ export function TransactionForm() {
   const [destination, setDestination] = useState("");
   const [amountXrp, setAmountXrp] = useState("");
   const [destinationTag, setDestinationTag] = useState("");
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<PaymentFormResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
@@ -58,7 +61,7 @@ export function TransactionForm() {
     }
   }, [amountXrp]);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (submittingRef.current || isSubmitting) return;
 
@@ -211,33 +214,35 @@ export function TransactionForm() {
           </Button>
         </form>
 
-        {result?.status === "submitted" || result?.status === "validated" ? (
-          <Alert variant="success" className="mt-4">
-            <CheckCircle2 className="h-4 w-4" />
-            <AlertTitle>
-              {result.status === "validated" ? "Payment validated" : "Payment submitted"}
-            </AlertTitle>
-            <AlertDescription>
-              <div className="space-y-1">
-                <p className="break-all font-mono text-xs">Hash: {result.hash}</p>
-                {result.id && <p className="text-xs">ID: {result.id}</p>}
-                {result.status === "submitted" && (
-                  <p className="text-xs">The ledger has not reported validation yet.</p>
-                )}
-              </div>
-            </AlertDescription>
-          </Alert>
-        ) : result ? (
-          <Alert
-            variant={result.status === "cancelled" ? "warning" : "destructive"}
-            className="mt-4"
-          >
-            <XCircle className="h-4 w-4" />
-            <AlertTitle>
-              {result.status === "cancelled" ? "Payment cancelled" : "Payment failed"}
-            </AlertTitle>
-            <AlertDescription>{result.error}</AlertDescription>
-          </Alert>
+        {result ? (
+          result.status === "submitted" || result.status === "validated" ? (
+            <Alert variant="success" className="mt-4">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertTitle>
+                {result.status === "validated" ? "Payment validated" : "Payment submitted"}
+              </AlertTitle>
+              <AlertDescription>
+                <div className="space-y-1">
+                  <p className="break-all font-mono text-xs">Hash: {result.hash}</p>
+                  {result.id && <p className="text-xs">ID: {result.id}</p>}
+                  {result.status === "submitted" && (
+                    <p className="text-xs">The ledger has not reported validation yet.</p>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert
+              variant={result.status === "cancelled" ? "warning" : "destructive"}
+              className="mt-4"
+            >
+              <XCircle className="h-4 w-4" />
+              <AlertTitle>
+                {result.status === "cancelled" ? "Payment cancelled" : "Payment failed"}
+              </AlertTitle>
+              <AlertDescription>{result.error}</AlertDescription>
+            </Alert>
+          )
         ) : null}
       </CardContent>
     </Card>

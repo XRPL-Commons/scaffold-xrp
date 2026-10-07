@@ -7,9 +7,9 @@ import {
   parseDestinationTag,
   parseXrpAmount,
   PaymentInputError,
-} from "./payment.mjs";
+} from "./payment.ts";
 
-const validAddress = (value) => value === "rDestination";
+const validAddress = (value: string) => value === "rDestination";
 
 test("converts XRP decimals to exact drops", () => {
   assert.equal(parseXrpAmount("1"), "1000000");
@@ -104,6 +104,7 @@ test("does not turn a rejected ledger result into a successful payment", () => {
   });
 
   assert.equal(result.status, "error");
+  if (result.status !== "error") throw new Error("Expected a ledger rejection");
   assert.match(result.error, /tecNO_DST/);
 });
 
@@ -119,6 +120,7 @@ test("inspects the adapter submitResult wrapper for ledger outcomes", () => {
   });
 
   assert.equal(result.status, "error");
+  if (result.status !== "error") throw new Error("Expected a ledger rejection");
   assert.match(result.error, /tecNO_DST/);
 });
 
@@ -143,8 +145,5 @@ test("treats explicit adapter errors as failures even with a hash", () => {
 
 test("rejects empty or missing adapter results", () => {
   assert.equal(normalizeSubmittedPaymentResult(null).status, "error");
-  assert.equal(
-    normalizeSubmittedPaymentResult({ validated: true }).status,
-    "error"
-  );
+  assert.equal(normalizeSubmittedPaymentResult({ validated: true }).status, "error");
 });

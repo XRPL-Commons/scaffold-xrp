@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useWallet } from "./providers/WalletProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -9,14 +9,15 @@ import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
 import { stringToHex } from "../lib/utils";
+import type { ContractCallTransaction, TransactionResult } from "../lib/transactions";
 
 export function ContractInteraction() {
-  const { walletManager, isConnected, addEvent, showStatus } = useWallet();
+  const { walletManager, signAndSubmit, isConnected, addEvent, showStatus } = useWallet();
   const [contractAddress, setContractAddress] = useState("");
   const [functionName, setFunctionName] = useState("");
   const [functionArgs, setFunctionArgs] = useState("");
   const [isCalling, setIsCalling] = useState(false);
-  const [callResult, setCallResult] = useState(null);
+  const [callResult, setCallResult] = useState<TransactionResult | null>(null);
 
   const loadCounterExample = () => {
     setFunctionName("increment");
@@ -39,7 +40,7 @@ export function ContractInteraction() {
       setIsCalling(true);
       setCallResult(null);
 
-      const transaction = {
+      const transaction: ContractCallTransaction = {
         TransactionType: "ContractCall",
         Account: walletManager.account.address,
         ContractAccount: contractAddress,
@@ -52,7 +53,7 @@ export function ContractInteraction() {
         transaction.FunctionArguments = stringToHex(functionArgs);
       }
 
-      const txResult = await walletManager.signAndSubmit(transaction);
+      const txResult = await signAndSubmit(transaction);
 
       setCallResult({
         success: true,
@@ -63,11 +64,12 @@ export function ContractInteraction() {
       showStatus("Contract called successfully!", "success");
       addEvent("Contract Called", txResult);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       setCallResult({
         success: false,
-        error: error.message,
+        error: message,
       });
-      showStatus(`Contract call failed: ${error.message}`, "error");
+      showStatus(`Contract call failed: ${message}`, "error");
       addEvent("Contract Call Failed", error);
     } finally {
       setIsCalling(false);
@@ -95,7 +97,7 @@ export function ContractInteraction() {
             id="contractAddress"
             type="text"
             value={contractAddress}
-            onChange={(e) => setContractAddress(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setContractAddress(e.target.value)}
             placeholder="rAddress..."
           />
         </div>
@@ -106,13 +108,11 @@ export function ContractInteraction() {
             id="functionName"
             type="text"
             value={functionName}
-            onChange={(e) => setFunctionName(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setFunctionName(e.target.value)}
             placeholder="e.g., increment, get_value"
           />
           {functionName && (
-            <p className="text-xs text-muted-foreground">
-              Hex: {stringToHex(functionName)}
-            </p>
+            <p className="text-xs text-muted-foreground">Hex: {stringToHex(functionName)}</p>
           )}
         </div>
 
@@ -122,13 +122,11 @@ export function ContractInteraction() {
             id="functionArgs"
             type="text"
             value={functionArgs}
-            onChange={(e) => setFunctionArgs(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setFunctionArgs(e.target.value)}
             placeholder="e.g., 5, hello"
           />
           {functionArgs && (
-            <p className="text-xs text-muted-foreground">
-              Hex: {stringToHex(functionArgs)}
-            </p>
+            <p className="text-xs text-muted-foreground">Hex: {stringToHex(functionArgs)}</p>
           )}
         </div>
 

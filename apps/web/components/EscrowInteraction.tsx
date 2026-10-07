@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useWallet } from "./providers/WalletProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -8,12 +8,19 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
+import type {
+  EscrowCancelTransaction,
+  EscrowCreateTransaction,
+  EscrowFinishTransaction,
+  TransactionResult,
+} from "../lib/transactions";
 
 const RIPPLE_EPOCH_OFFSET = 946684800;
+type EscrowAction = "create" | "finish" | "cancel";
 
 export function EscrowInteraction() {
-  const { walletManager, isConnected, addEvent, showStatus } = useWallet();
-  const [action, setAction] = useState("finish");
+  const { walletManager, signAndSubmit, isConnected, addEvent, showStatus } = useWallet();
+  const [action, setAction] = useState<EscrowAction>("finish");
   const [owner, setOwner] = useState("");
   const [escrowId, setEscrowId] = useState("");
   const [destination, setDestination] = useState("");
@@ -21,7 +28,7 @@ export function EscrowInteraction() {
   const [finishAfter, setFinishAfter] = useState("");
   const [cancelAfter, setCancelAfter] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<TransactionResult | null>(null);
 
   const handleSubmit = async () => {
     if (!walletManager || !walletManager.account) {
@@ -33,7 +40,7 @@ export function EscrowInteraction() {
       setIsSubmitting(true);
       setResult(null);
 
-      let transaction;
+      let transaction: EscrowCreateTransaction | EscrowFinishTransaction | EscrowCancelTransaction;
 
       if (action === "create") {
         if (!destination || !amount) {
@@ -96,7 +103,7 @@ export function EscrowInteraction() {
         };
       }
 
-      const txResult = await walletManager.signAndSubmit(transaction);
+      const txResult = await signAndSubmit(transaction);
 
       setResult({
         success: true,
@@ -162,7 +169,7 @@ export function EscrowInteraction() {
                 id="escrowDestination"
                 type="text"
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setDestination(e.target.value)}
                 placeholder="rAddress..."
               />
             </div>
@@ -172,7 +179,7 @@ export function EscrowInteraction() {
                 id="escrowAmount"
                 type="text"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
                 placeholder="e.g., 1000000"
               />
             </div>
@@ -182,7 +189,7 @@ export function EscrowInteraction() {
                 id="escrowFinishAfter"
                 type="text"
                 value={finishAfter}
-                onChange={(e) => setFinishAfter(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setFinishAfter(e.target.value)}
                 placeholder="e.g., 60"
               />
             </div>
@@ -192,7 +199,7 @@ export function EscrowInteraction() {
                 id="escrowCancelAfter"
                 type="text"
                 value={cancelAfter}
-                onChange={(e) => setCancelAfter(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setCancelAfter(e.target.value)}
                 placeholder="e.g., 3600"
               />
             </div>
@@ -207,7 +214,7 @@ export function EscrowInteraction() {
                 id="escrowOwner"
                 type="text"
                 value={owner}
-                onChange={(e) => setOwner(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setOwner(e.target.value)}
                 placeholder="rAddress..."
               />
             </div>
@@ -217,7 +224,7 @@ export function EscrowInteraction() {
                 id="escrowId"
                 type="text"
                 value={escrowId}
-                onChange={(e) => setEscrowId(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setEscrowId(e.target.value)}
                 placeholder="Escrow ledger ID..."
               />
             </div>
@@ -234,7 +241,9 @@ export function EscrowInteraction() {
 
         {isConnected && (
           <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Submitting..." : `Escrow ${action.charAt(0).toUpperCase() + action.slice(1)}`}
+            {isSubmitting
+              ? "Submitting..."
+              : `Escrow ${action.charAt(0).toUpperCase() + action.slice(1)}`}
           </Button>
         )}
 

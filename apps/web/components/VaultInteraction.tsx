@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useWallet } from "./providers/WalletProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -8,14 +8,15 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle, Info } from "lucide-react";
+import type { TransactionResult, VaultTransaction } from "../lib/transactions";
 
 export function VaultInteraction() {
-  const { walletManager, isConnected, addEvent, showStatus } = useWallet();
+  const { walletManager, signAndSubmit, isConnected, addEvent, showStatus } = useWallet();
   const [vaultId, setVaultId] = useState("");
   const [amount, setAmount] = useState("");
-  const [action, setAction] = useState("deposit");
+  const [action, setAction] = useState<"deposit" | "withdraw">("deposit");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<TransactionResult | null>(null);
 
   const handleSubmit = async () => {
     if (!walletManager || !walletManager.account) {
@@ -38,7 +39,7 @@ export function VaultInteraction() {
       setIsSubmitting(true);
       setResult(null);
 
-      const transaction = {
+      const transaction: VaultTransaction = {
         TransactionType: action === "deposit" ? "VaultDeposit" : "VaultWithdraw",
         Account: walletManager.account.address,
         VaultID: vaultId,
@@ -47,7 +48,7 @@ export function VaultInteraction() {
         Fee: "1000000",
       };
 
-      const txResult = await walletManager.signAndSubmit(transaction);
+      const txResult = await signAndSubmit(transaction);
 
       setResult({
         success: true,
@@ -84,7 +85,7 @@ export function VaultInteraction() {
             id="vaultId"
             type="text"
             value={vaultId}
-            onChange={(e) => setVaultId(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setVaultId(e.target.value)}
             placeholder="Vault ledger ID..."
           />
         </div>
@@ -115,7 +116,7 @@ export function VaultInteraction() {
             id="vaultAmount"
             type="text"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
             placeholder="e.g., 1000000"
           />
         </div>

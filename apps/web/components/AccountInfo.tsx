@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  useWallet as useBindingWallet,
-  useWalletModal,
-} from "@xrpl-commons/xrpl-connect-react";
+import { useWallet as useBindingWallet, useWalletModal } from "@xrpl-commons/xrpl-connect-react";
 import { useWallet } from "./providers/WalletProvider";
 import { WalletSetupDetails } from "./WalletSetupDetails";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -12,13 +9,7 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 
 export function AccountInfo() {
-  const {
-    connected,
-    account,
-    network,
-    manager,
-    connecting,
-  } = useBindingWallet();
+  const { connected, account, network, manager, connecting } = useBindingWallet();
   const { ready, open } = useWalletModal();
   const { selectedNetwork, showStatus } = useWallet();
 
@@ -42,7 +33,8 @@ export function AccountInfo() {
           <Alert>
             <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
               <span>
-                Your wallet address and balance will appear here after connecting on {selectedNetwork.name}.
+                Your wallet address and balance will appear here after connecting on{" "}
+                {selectedNetwork.name}.
               </span>
               <Button
                 type="button"
@@ -82,9 +74,7 @@ export function AccountInfo() {
           <span className="text-sm">{manager.wallet?.name || "Wallet"}</span>
         </div>
         {networkMismatch && (
-          <Badge variant="warning">
-            Switch wallet to {selectedNetwork.name} before sending
-          </Badge>
+          <Badge variant="warning">Switch wallet to {selectedNetwork.name} before sending</Badge>
         )}
         <p className="text-xs text-muted-foreground">
           Use the wallet button above to view account actions or disconnect.

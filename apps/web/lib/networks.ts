@@ -17,7 +17,10 @@ export const NETWORKS = {
     explorer: "https://devnet.xrpl.org",
     walletConnectId: "xrpl:2",
   },
-};
+} as const;
+
+export type Network = (typeof NETWORKS)[keyof typeof NETWORKS];
+export type NetworkId = Network["id"];
 
 export const DEFAULT_NETWORK =
   Object.values(NETWORKS).find(
@@ -26,6 +29,6 @@ export const DEFAULT_NETWORK =
 
 export const SUPPORTED_NETWORKS = Object.values(NETWORKS);
 
-export function getNetworkById(networkId) {
+export function getNetworkById(networkId: string | undefined): Network | null {
   return SUPPORTED_NETWORKS.find((network) => network.id === networkId) ?? null;
 }

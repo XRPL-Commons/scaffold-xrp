@@ -15,7 +15,12 @@ export function NetworkSelector() {
         className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         value={selectedNetworkId}
         disabled={networkSwitching}
-        onChange={(event) => void selectNetwork(event.target.value)}
+        onChange={(event) => {
+          const nextNetwork = SUPPORTED_NETWORKS.find(
+            (network) => network.id === event.target.value
+          );
+          if (nextNetwork) void selectNetwork(nextNetwork.id);
+        }}
       >
         {SUPPORTED_NETWORKS.map((network) => (
           <option key={network.id} value={network.id}>

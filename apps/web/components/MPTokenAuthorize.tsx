@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useWallet } from "./providers/WalletProvider";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -8,18 +8,25 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { CheckCircle2, XCircle } from "lucide-react";
+import type {
+  MPTokenAuthorizeTransaction,
+  TransactionFailureResult,
+  TransactionSuccessResult,
+} from "../lib/transactions";
 
 const HEX_64_REGEX = /^[0-9a-fA-F]{64}$/;
+type AuthorizationResult =
+  (TransactionSuccessResult & { action: "authorized" | "unauthorized" }) | TransactionFailureResult;
 
 export function MPTokenAuthorize() {
-  const { walletManager, addEvent, showStatus } = useWallet();
+  const { walletManager, signAndSubmit, addEvent, showStatus } = useWallet();
 
   const [issuanceId, setIssuanceId] = useState("");
   const [unauthorize, setUnauthorize] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<AuthorizationResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!walletManager || !walletManager.account) {
@@ -36,14 +43,14 @@ export function MPTokenAuthorize() {
       setIsSubmitting(true);
       setResult(null);
 
-      const transaction = {
+      const transaction: MPTokenAuthorizeTransaction = {
         TransactionType: "MPTokenAuthorize",
         Account: walletManager.account.address,
         MPTokenIssuanceID: issuanceId,
         Flags: unauthorize ? 1 : 0,
       };
 
-      const txResult = await walletManager.signAndSubmit(transaction);
+      const txResult = await signAndSubmit(transaction);
 
       const action = unauthorize ? "unauthorized" : "authorized";
 
@@ -60,8 +67,9 @@ export function MPTokenAuthorize() {
       setIssuanceId("");
       setUnauthorize(false);
     } catch (error) {
-      setResult({ success: false, error: error.message });
-      showStatus(`Failed to authorize MPToken: ${error.message}`, "error");
+      const message = error instanceof Error ? error.message : String(error);
+      setResult({ success: false, error: message });
+      showStatus(`Failed to authorize MPToken: ${message}`, "error");
       addEvent("MPToken Authorize Failed", error);
     } finally {
       setIsSubmitting(false);
@@ -78,7 +86,7 @@ export function MPTokenAuthorize() {
             type="text"
             placeholder="000100001E962F495F07A990F4ED55D2..."
             value={issuanceId}
-            onChange={(e) => setIssuanceId(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setIssuanceId(e.target.value)}
             className="font-mono text-xs"
             required
           />
@@ -103,8 +111,8 @@ export function MPTokenAuthorize() {
           {isSubmitting
             ? "Processing..."
             : unauthorize
-            ? "Revoke Authorization"
-            : "Authorize MPToken"}
+              ? "Revoke Authorization"
+              : "Authorize MPToken"}
         </Button>
 
         <div className="rounded-md border p-3 text-xs text-muted-foreground space-y-1">
@@ -121,11 +129,7 @@ export function MPTokenAuthorize() {
 
       {result && (
         <Alert variant={result.success ? "success" : "destructive"} className="mt-4">
-          {result.success ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : (
-            <XCircle className="h-4 w-4" />
-          )}
+          {result.success ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
           <AlertTitle>
             {result.success
               ? result.action === "authorized"
