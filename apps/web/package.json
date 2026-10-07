@@ -10,17 +10,12 @@
     "test": "node --test lib/payment.test.mjs"
   },
   "dependencies": {
-    "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "crypto-browserify": "^3.12.1",
-    "events": "^3.3.0",
     "lucide-react": "^0.562.0",
     "next": "16.4.0",
-    "process": "^0.11.10",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "stream-browserify": "^3.0.0",
     "tailwind-merge": "^3.4.0",
     "xrpl": "^3.0.0",
     "xrpl-connect": "1.0.0",

@@ -6,5 +6,9 @@ export function cn(...inputs) {
 }
 
 export function stringToHex(str) {
-  return Buffer.from(str, "utf8").toString("hex").toUpperCase();
+  return Array.from(new TextEncoder().encode(str), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  )
+    .join("")
+    .toUpperCase();
 }
