@@ -1,81 +1,161 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import assert from 'node:assert/strict'
+import test from 'node:test'
+
 import {
-  PaymentInputError,
   buildPaymentTransaction,
-  normalizeSubmittedPayment,
+  normalizeSubmittedPaymentResult,
   parseDestinationTag,
   parseXrpAmount,
-} from "./payment.mjs";
+  PaymentInputError,
+} from './payment.mjs'
 
-const validAddress = (value) => value.startsWith("r");
+const validAddress = (value) => value === 'rDestination'
 
-test("converts XRP to drops without floating point rounding", () => {
-  assert.equal(parseXrpAmount("1.000001"), "1000001");
-  assert.equal(parseXrpAmount("0.000001"), "1");
-});
+test('converts XRP decimals to exact drops', () => {
+  assert.equal(parseXrpAmount('1'), '1000000')
+  assert.equal(parseXrpAmount('0.000001'), '1')
+  assert.equal(parseXrpAmount('12.340500'), '12340500')
+})
 
-test("rejects invalid amounts and tags", () => {
-  assert.throws(() => parseXrpAmount("1.0000001"), PaymentInputError);
-  assert.throws(() => parseXrpAmount("0"), PaymentInputError);
-  assert.throws(() => parseDestinationTag("12.5"), PaymentInputError);
-  assert.throws(() => parseDestinationTag("4294967296"), PaymentInputError);
-});
+test('rejects fractional precision and non-positive amounts', () => {
+  for (const value of ['0', '0.0000001', '1e-3', '-1']) {
+    assert.throws(() => parseXrpAmount(value), PaymentInputError)
+  }
+})
 
-test("builds a payment with an optional destination tag", () => {
+test('validates optional destination tags', () => {
+  assert.equal(parseDestinationTag('0'), 0)
+  assert.equal(parseDestinationTag('4294967295'), 4294967295)
+  assert.equal(parseDestinationTag(''), undefined)
+  assert.throws(() => parseDestinationTag('4294967296'), PaymentInputError)
+})
+
+test('builds a payment with drops and an optional tag', () => {
   assert.deepEqual(
     buildPaymentTransaction({
-      accountAddress: "rSender",
-      accountNetworkId: "testnet",
-      selectedNetworkId: "testnet",
-      destination: "rDestination",
-      amountXrp: "2.5",
-      destinationTag: "12345",
+      accountAddress: 'rSource',
+      accountNetworkId: 'testnet',
+      selectedNetworkId: 'testnet',
+      destination: 'rDestination',
+      amountXrp: '2.5',
+      destinationTag: '42',
       isValidAddress: validAddress,
     }),
     {
-      TransactionType: "Payment",
-      Account: "rSender",
-      Destination: "rDestination",
-      Amount: "2500000",
-      DestinationTag: 12345,
+      TransactionType: 'Payment',
+      Account: 'rSource',
+      Destination: 'rDestination',
+      Amount: '2500000',
+      DestinationTag: 42,
     },
-  );
-});
+  )
+})
 
-test("blocks payments when the wallet network differs from the selector", () => {
+test('prevents a payment when the wallet network differs', () => {
   assert.throws(
     () =>
       buildPaymentTransaction({
-        accountAddress: "rSender",
-        accountNetworkId: "testnet",
-        selectedNetworkId: "devnet",
-        destination: "rDestination",
-        amountXrp: "1",
+        accountAddress: 'rSource',
+        accountNetworkId: 'devnet',
+        selectedNetworkId: 'testnet',
+        destination: 'rDestination',
+        amountXrp: '1',
         isValidAddress: validAddress,
       }),
-    (error) =>
-      error instanceof PaymentInputError &&
-      error.code === "NETWORK_MISMATCH",
-  );
-});
+    /switch it to testnet/,
+  )
+})
 
-test("only reports submitted or validated payments with a hash and successful ledger result", () => {
+test('requires ledger success metadata before showing validation', () => {
   assert.deepEqual(
-    normalizeSubmittedPayment({ hash: "ABC", engine_result: "tesSUCCESS" }),
-    { status: "submitted", hash: "ABC", id: undefined },
-  );
-  assert.deepEqual(
-    normalizeSubmittedPayment({
-      hash: "DEF",
+    normalizeSubmittedPaymentResult({
+      hash: 'ABC123',
       validated: true,
-      meta: { TransactionResult: "tesSUCCESS" },
+      meta: { TransactionResult: 'tesSUCCESS' },
     }),
-    { status: "validated", hash: "DEF", id: undefined },
-  );
-  assert.throws(
-    () => normalizeSubmittedPayment({ hash: "BAD", meta: { TransactionResult: "tecNO_DST" } }),
-    PaymentInputError,
-  );
-  assert.throws(() => normalizeSubmittedPayment({ validated: true }), PaymentInputError);
-});
+    {
+      status: 'validated',
+      hash: 'ABC123',
+      id: undefined,
+      resultCode: 'tesSUCCESS',
+    },
+  )
+
+  assert.equal(
+    normalizeSubmittedPaymentResult({ hash: 'ABC123', validated: true }).status,
+    'submitted',
+  )
+  assert.equal(
+    normalizeSubmittedPaymentResult({
+      hash: 'ABC123',
+      validated: false,
+      meta: { TransactionResult: 'tesSUCCESS' },
+    }).status,
+    'submitted',
+  )
+})
+
+test('does not turn a rejected ledger result into a successful payment', () => {
+  const result = normalizeSubmittedPaymentResult({
+    hash: 'ABC123',
+    validated: true,
+    engine_result: 'tesSUCCESS',
+    meta: { TransactionResult: 'tecNO_DST' },
+  })
+
+  assert.equal(result.status, 'error')
+  assert.match(result.error, /tecNO_DST/)
+})
+
+test('inspects the adapter submitResult wrapper for ledger outcomes', () => {
+  const result = normalizeSubmittedPaymentResult({
+    hash: 'ABC123',
+    submitResult: {
+      result: {
+        engine_result: 'tesSUCCESS',
+        meta: { TransactionResult: 'tecNO_DST' },
+      },
+    },
+  })
+
+  assert.equal(result.status, 'error')
+  assert.match(result.error, /tecNO_DST/)
+})
+
+test('keeps a hash-only adapter response submitted but unvalidated', () => {
+  assert.deepEqual(normalizeSubmittedPaymentResult({ hash: 'ABC123' }), {
+    status: 'submitted',
+    hash: 'ABC123',
+    id: undefined,
+    resultCode: undefined,
+  })
+})
+
+test('treats explicit adapter errors as failures even with a hash', () => {
+  const result = normalizeSubmittedPaymentResult({
+    hash: 'ABC123',
+    submitResult: { error: 'Submission was rejected' },
+  })
+
+  assert.equal(result.status, 'error')
+  assert.equal(result.error, 'Submission was rejected')
+})
+
+test('rejects empty or missing adapter results', () => {
+  assert.equal(normalizeSubmittedPaymentResult(null).status, 'error')
+  assert.equal(
+    normalizeSubmittedPaymentResult({ validated: true }).status,
+    'error',
+  )
+})
+
+test('only treats terQUEUED as a queued engine result', () => {
+  assert.equal(
+    normalizeSubmittedPaymentResult({ hash: 'ABC123', engine_result: 'terQUEUED' }).status,
+    'submitted',
+  )
+  assert.equal(
+    normalizeSubmittedPaymentResult({ hash: 'ABC123', engine_result: 'terRETRY' }).status,
+    'error',
+  )
+})

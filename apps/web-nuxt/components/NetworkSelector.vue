@@ -7,7 +7,7 @@ import {
 import { useWallet as useBindingWallet } from '@xrpl-commons/xrpl-connect-vue'
 
 const { selectedNetwork, selectedNetworkId, setSelectedNetworkId } = useNetworkSelection()
-const { manager, connected } = useBindingWallet()
+const { manager } = useBindingWallet()
 const { showStatus } = useWallet()
 const isSwitching = ref(false)
 
@@ -16,20 +16,27 @@ async function handleNetworkChange(event: Event) {
   if (nextNetworkId === selectedNetworkId.value || isSwitching.value) return
 
   isSwitching.value = true
+  const previousNetworkId = selectedNetworkId.value
+  let shouldReload = false
   try {
     // v1 has no generic setNetwork method. Disconnect first, persist the
     // selection, and reload so the client plugin creates a manager with the
     // selected network as its authoritative default.
-    if (connected.value) await manager.disconnect()
-    setSelectedNetworkId(nextNetworkId)
+    await manager.disconnect()
     if (import.meta.client) {
       window.localStorage.setItem(NETWORK_STORAGE_KEY, nextNetworkId)
+      setSelectedNetworkId(nextNetworkId)
+      shouldReload = true
       window.location.reload()
+    } else {
+      setSelectedNetworkId(nextNetworkId)
     }
   } catch (error) {
+    setSelectedNetworkId(previousNetworkId)
     const message = error instanceof Error ? error.message : String(error)
     showStatus(`Could not switch network: ${message}`, 'error')
-    isSwitching.value = false
+  } finally {
+    if (!shouldReload) isSwitching.value = false
   }
 }
 </script>

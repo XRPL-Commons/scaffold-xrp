@@ -131,35 +131,35 @@ const handleSubmit = async () => {
         <label class="text-sm font-medium leading-none">Action</label>
         <div class="flex gap-2">
           <button
-            @click="action = 'create'"
             :class="[
               'inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3',
               action === 'create'
                 ? 'bg-primary text-primary-foreground shadow hover:bg-primary/90'
                 : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
             ]"
+            @click="action = 'create'"
           >
             Create
           </button>
           <button
-            @click="action = 'finish'"
             :class="[
               'inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3',
               action === 'finish'
                 ? 'bg-primary text-primary-foreground shadow hover:bg-primary/90'
                 : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
             ]"
+            @click="action = 'finish'"
           >
             Finish
           </button>
           <button
-            @click="action = 'cancel'"
             :class="[
               'inline-flex items-center justify-center rounded-md text-sm font-medium h-8 px-3',
               action === 'cancel'
                 ? 'bg-primary text-primary-foreground shadow hover:bg-primary/90'
                 : 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
             ]"
+            @click="action = 'cancel'"
           >
             Cancel
           </button>
@@ -175,7 +175,7 @@ const handleSubmit = async () => {
             type="text"
             placeholder="rAddress..."
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+          >
         </div>
         <div class="space-y-2">
           <label for="escrowAmount" class="text-sm font-medium leading-none">Amount (drops)</label>
@@ -185,7 +185,7 @@ const handleSubmit = async () => {
             type="text"
             placeholder="e.g., 1000000"
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+          >
         </div>
         <div class="space-y-2">
           <label for="escrowFinishAfter" class="text-sm font-medium leading-none">Finish After (seconds from now)</label>
@@ -195,7 +195,7 @@ const handleSubmit = async () => {
             type="text"
             placeholder="e.g., 60"
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+          >
         </div>
         <div class="space-y-2">
           <label for="escrowCancelAfter" class="text-sm font-medium leading-none">Cancel After (seconds from now)</label>
@@ -205,7 +205,7 @@ const handleSubmit = async () => {
             type="text"
             placeholder="e.g., 3600"
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+          >
         </div>
       </template>
 
@@ -218,7 +218,7 @@ const handleSubmit = async () => {
             type="text"
             placeholder="rAddress..."
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+          >
         </div>
         <div class="space-y-2">
           <label for="escrowId" class="text-sm font-medium leading-none">Escrow ID</label>
@@ -228,7 +228,7 @@ const handleSubmit = async () => {
             type="text"
             placeholder="Escrow ledger ID..."
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+          >
         </div>
       </template>
 
@@ -242,9 +242,9 @@ const handleSubmit = async () => {
 
       <button
         v-if="isConnected"
-        @click="handleSubmit"
         :disabled="isSubmitting"
         class="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        @click="handleSubmit"
       >
         {{ isSubmitting ? 'Submitting...' : `Escrow ${action.charAt(0).toUpperCase() + action.slice(1)}` }}
       </button>

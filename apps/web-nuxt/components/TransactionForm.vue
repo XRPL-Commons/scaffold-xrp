@@ -8,13 +8,24 @@ import { isWalletError, WalletErrorCode } from 'xrpl-connect'
 import { isValidClassicAddress } from 'xrpl'
 import {
   buildPaymentTransaction,
-  normalizeSubmittedPayment,
+  normalizeSubmittedPaymentResult,
   parseXrpAmount,
 } from '~/lib/payment.mjs'
 
 type PaymentResult =
-  | { status: 'submitted' | 'validated'; hash: string; id?: string }
-  | { status: 'cancelled' | 'error'; error: string }
+  | {
+      status: 'submitted' | 'validated'
+      hash: string
+      id?: string
+      resultCode?: string
+    }
+  | {
+      status: 'cancelled' | 'error'
+      hash?: string
+      id?: string
+      resultCode?: string
+      error: string
+    }
 
 const { connected, account, connecting } = useBindingWallet()
 const { signAndSubmit } = useSigner()
@@ -88,10 +99,14 @@ async function handleSubmit() {
     const submittedTransaction = await signAndSubmit(
       transaction as Parameters<typeof signAndSubmit>[0],
     )
-    const nextResult = normalizeSubmittedPayment(submittedTransaction) as Extract<
-      PaymentResult,
-      { status: 'submitted' | 'validated' }
-    >
+    const nextResult = normalizeSubmittedPaymentResult(submittedTransaction) as PaymentResult
+
+    if (nextResult.status === 'error') {
+      result.value = nextResult
+      showStatus(`Payment failed: ${nextResult.error}`, 'error')
+      addEvent('Payment Failed', nextResult)
+      return
+    }
 
     result.value = nextResult
     showStatus(
@@ -167,7 +182,7 @@ async function handleSubmit() {
             placeholder="rN7n7otQDd6FczFgLdlqtyMVrn3HMfXoQT"
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             required
-          />
+          >
         </div>
 
         <div class="space-y-2">
@@ -182,7 +197,7 @@ async function handleSubmit() {
             autocomplete="off"
             placeholder="e.g. 12345"
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+          >
           <p class="text-xs text-muted-foreground">
             Include a tag when the recipient provides one, such as an exchange deposit.
           </p>
@@ -199,7 +214,7 @@ async function handleSubmit() {
             placeholder="1.5"
             class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             required
-          />
+          >
           <p class="text-xs text-muted-foreground">
             {{ dropsPreview ? `${dropsPreview} drops` : 'Up to six decimal places' }} · 1 XRP = 1,000,000 drops
           </p>
