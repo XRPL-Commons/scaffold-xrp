@@ -12,7 +12,7 @@ Create a polished, simple Next.js or Nuxt project with XRP payments, Xaman, GemW
 - [x] Align dependencies, Node requirements, lint/type-check commands, lockfile, and contributor documentation.
 - [x] Verify clean installs, builds, lint, type checks, CLI generation, regression tests, and production HTTP responses; document unavailable browser verification.
 - [x] Review integrated diff and prepare commits.
-- [ ] Push branch and open a pull request.
+- [x] Push signed commits and open [PR #16](https://github.com/XRPL-Commons/scaffold-xrp/pull/16).
 
 ## Verification requirements
 
