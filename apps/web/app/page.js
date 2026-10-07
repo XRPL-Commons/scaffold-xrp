@@ -2,9 +2,7 @@
 
 import { Header } from "../components/Header";
 import { AccountInfo } from "../components/AccountInfo";
-import { ContractInteraction } from "../components/ContractInteraction";
 import { TransactionForm } from "../components/TransactionForm";
-import { MPTokenCard } from "../components/MPTokenCard";
 
 export default function Home() {
   return (
@@ -16,24 +14,21 @@ export default function Home() {
           <div className="mb-8">
             <h1 className="text-2xl font-semibold tracking-tight">Scaffold-XRP</h1>
             <p className="text-muted-foreground">
-              Build dApps on XRPL with smart contracts
+              A focused starter kit for building dApps on the XRP Ledger
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             <AccountInfo />
-            <ContractInteraction />
             <TransactionForm />
-            <MPTokenCard />
           </div>
 
           <div className="mt-8 rounded-lg border p-6">
-            <h2 className="font-semibold mb-3">Getting Started</h2>
-            <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-              <li>Connect your wallet using the button in the header</li>
-              <li>Deploy your smart contract using Bedrock or XRPL CLI</li>
-              <li>Interact with deployed contracts using the contract panel</li>
-              <li>Send XRP transactions using the transaction form</li>
+            <h2 className="mb-3 font-semibold">Getting started</h2>
+            <ol className="list-inside list-decimal space-y-2 text-sm text-muted-foreground">
+              <li>Choose Testnet or Devnet and connect Xaman, GemWallet, or WalletConnect.</li>
+              <li>View your connected account details in the account panel.</li>
+              <li>Send XRP with an optional destination tag from the payment panel.</li>
             </ol>
           </div>
         </div>

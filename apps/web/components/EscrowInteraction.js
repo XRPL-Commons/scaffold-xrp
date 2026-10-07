@@ -123,7 +123,7 @@ export function EscrowInteraction() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Escrow Interaction</CardTitle>
-        <CardDescription>Create and manage smart escrows</CardDescription>
+        <CardDescription>Create and manage XRPL escrow transactions</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -225,10 +225,10 @@ export function EscrowInteraction() {
         )}
 
         <div className="rounded-md border p-3 text-sm">
-          <p className="font-medium mb-2">Smart Escrow Entry Point</p>
+          <p className="font-medium mb-2">Escrow transaction flow</p>
           <ul className="text-muted-foreground space-y-1 text-xs">
-            <li>finish() - WASM condition checked on EscrowFinish</li>
-            <li>Returns 1 to release funds, 0 to keep locked</li>
+            <li>EscrowFinish releases funds after the ledger condition is met</li>
+            <li>Build programmable escrow rules separately with Bedrock</li>
           </ul>
         </div>
 
