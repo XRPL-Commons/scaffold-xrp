@@ -28,7 +28,17 @@ The CLI build packages templates from the repository's current app sources. CLI 
 
 ## Check the distributable
 
-Build the CLI, pack it, and test the resulting tarball from an empty temporary directory. Test both Next.js and Nuxt using the normal non-experimental path. Install dependencies and run each generated app's lint, tests, type check where available, and production build. Check that the project README and environment example match the chosen framework.
+Build the CLI, pack it, and test the resulting tarball from an empty temporary directory. Test both Next.js and Nuxt using the normal non-experimental path. Install dependencies and run each generated app's lint, type check, tests, and production build. Check that the project README and environment example match the chosen framework.
+
+The packaged starter smoke test accepts the framework, package manager, and an optional pnpm version:
+
+```sh
+node scripts/verify-starter.mjs nextjs npm
+node scripts/verify-starter.mjs nuxt npm
+node scripts/verify-starter.mjs nextjs pnpm 10.34.6
+```
+
+For pnpm checks, the requested version is installed in a temporary directory and placed first on the child process `PATH`; the global pnpm installation is unchanged. The test verifies the generated lockfile and pnpm workspace build approvals before running lint, type checking, tests, and the production build. CI runs both frameworks with npm, pnpm 10.34.6, and pnpm 11.22.0.
 
 Also test the experimental opt-in with Bedrock available: selected components and a Bedrock project should be created, while an ordinary starter should contain neither. A failed setup or dependency installation must exit with a failure and must not claim that project creation succeeded.
 
