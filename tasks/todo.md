@@ -40,7 +40,7 @@ Limits:
 
 - [x] Reproduce installation with pnpm 11.22.0: ignored overrides plus ERR_PNPM_IGNORED_BUILDS on hidden stdout.
 - [x] Preserve pnpm-workspace.yaml settings for flat projects, use allowBuilds, and stream installer output.
-- [x] Verify fresh Next/Nuxt installs using pnpm. Additional CI coverage is prepared in an isolated branch; integration and pushes are held for the user’s manual review.
+- [x] Verify fresh Next/Nuxt installs using pnpm. Additional CI coverage for npm, pnpm 10, and pnpm 11 is integrated after the user approved publishing on October 8.
 
 ## Next wallet hydration regression
 
@@ -51,11 +51,11 @@ Limits:
 
 - [x] Convert Next application code to strict TypeScript, preserving the official React provider.
 - [x] Update CLI generation, module detection, documentation, and checks for TypeScript files.
-- [x] Verify CLI regression tests and freshly generated TypeScript default/experimental starters locally. PR updates remain on hold for manual developer-experience review.
+- [x] Verify CLI regression tests and freshly generated TypeScript default/experimental starters locally. The user approved publishing these changes on October 8.
 
 Fresh Next and Nuxt projects now install through the CLI with pnpm 11.22.0 and pass lint, type checks where applicable, tests, and builds. Repaired the pnpm settings and installation in `/tmp/xrp-cli-testing/test` without changing application files.
 
-Manual developer-experience review takes priority: finish and verify the local CLI, then wait for user feedback before further pushes or CI runs.
+Manual developer-experience review completed; the user requested publishing the reviewed changes on October 8.
 
 Local TypeScript verification: CLI tests (8) and type check passed. Generated default Next starter using pnpm 11.22.0 passed type check, lint, payment tests (11), and production build. Generated experimental Next starter using pnpm 10.34.6 and actual Bedrock initialization passed type check, lint, and production build. The rebuilt local CLI is ready at `packages/create-xrp/dist/index.js`; the default manual-test project is `/tmp/xrp-cli-testing/typescript-next`. No additional CI was triggered and no post-review changes were pushed.
 
@@ -73,3 +73,9 @@ Clean-canvas review: removed visible network labels from both headers while reta
 - [x] Reuse `xrpl-rlusd-faucet/public/xrpl-logo.png` in both headers, verify it is included in generated projects, and refresh the local previews.
 
 Logo verification: both framework lint/build checks passed, the CLI bundle contains byte-identical copies of the source asset, and both preview URLs serve it successfully. Changes remain local.
+
+## Approved PR update — October 8
+
+The user approved the reviewed UI and requested the repository PR. Integrated the prepared package-manager checks: CI builds the CLI once and verifies generated Next/Nuxt projects through actual CLI dependency installation with npm, pnpm 10.34.6, and pnpm 11.22.0. The existing PR #16 will receive all reviewed changes; no duplicate PR is needed. Earlier notes about holding pushes document the review stage and no longer apply.
+
+Final publishing checks: the integrated packed-CLI smoke test passed for both frameworks with pnpm 11.22.0, including actual installation, lint, type checks, tests, and builds. The October 8 audit remains zero production advisories and four high/two critical development-tool advisories.
