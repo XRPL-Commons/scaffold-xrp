@@ -38,7 +38,12 @@ export async function ensureBedrock(): Promise<boolean> {
 
   console.log(
     chalk.yellow(
-      '\nBedrock CLI is required for smart contract, vault, and escrow support.'
+      '\nBedrock CLI is required for experimental contract, vault, and escrow support.'
+    )
+  );
+  console.log(
+    chalk.yellow(
+      'These transaction types require a Bedrock-compatible local or AlphaNet network; standard Testnet and Devnet may reject them.\n'
     )
   );
   console.log(

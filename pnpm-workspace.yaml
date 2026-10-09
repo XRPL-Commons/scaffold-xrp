@@ -1,3 +1,19 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+overrides:
+  shell-quote: '>=1.8.4'
+  tar: '>=7.5.19'
+  seroval: '>=1.5.3'
+  esbuild: '0.28.2'
+  postcss-selector-parser: '7.1.6'
+
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  bufferutil: false
+  es5-ext: false
+  utf-8-validate: false

@@ -1,86 +1,53 @@
-# Contributing to Scaffold-XRP
+# Contributing
 
-Thank you for your interest in contributing to Scaffold-XRP! This document provides guidelines and instructions for contributing.
+## Setup
 
-## Getting Started
+Use Node.js 22.18+ on the 22.x line, or Node.js 24.11+, and the pnpm version pinned in `package.json`.
 
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/scaffold-xrp.git`
-3. Install dependencies: `pnpm install`
-4. Create a branch: `git checkout -b feature/your-feature-name`
+```sh
+corepack enable
+pnpm install --frozen-lockfile
+pnpm --filter web dev
+# or: pnpm --filter web-nuxt dev
+```
 
-## Development Workflow
+Next and Nuxt should provide the same default wallet/account/payment experience. Experimental features belong behind the CLI opt-in and should not appear in the default template.
 
-### Running the Development Server
+## Verification
 
-\`\`\`bash
-pnpm dev
-\`\`\`
-
-### Building
-
-\`\`\`bash
-pnpm build
-\`\`\`
-
-### Linting and Formatting
-
-\`\`\`bash
+```sh
 pnpm lint
-pnpm format
-\`\`\`
+pnpm type-check
+pnpm test
+pnpm build
+```
 
-## Project Structure
+Use meaningful regression tests for transaction validation, wallet lifecycle, and CLI generation. Never claim an external wallet flow was verified solely because a build or mocked test passed.
 
-- `apps/web` - Next.js frontend application
-- `packages/bedrock` - Smart contracts in Rust
-- Root configuration files for Turborepo, pnpm, etc.
+The CLI build packages templates from the repository's current app sources. CLI builds and generation tests are not cached, so changes to either app always appear in the next generated project and its verification.
 
-## Code Style
+## Check the distributable
 
-- Use Prettier for code formatting (configured in `.prettierrc`)
-- Follow existing code patterns and conventions
-- Write descriptive commit messages
+Build the CLI, pack it, and test the resulting tarball from an empty temporary directory. Test both Next.js and Nuxt using the normal non-experimental path. Install dependencies and run each generated app's lint, type check, tests, and production build. Check that the project README and environment example match the chosen framework.
 
-## Making Changes
+The packaged starter smoke test accepts the framework, package manager, and an optional pnpm version:
 
-### Adding New Features
+```sh
+node scripts/verify-starter.mjs nextjs npm
+node scripts/verify-starter.mjs nuxt npm
+node scripts/verify-starter.mjs nextjs pnpm 10.34.6
+```
 
-1. Create a new branch from `main`
-2. Implement your feature
-3. Test thoroughly
-4. Submit a pull request
+For pnpm checks, the requested version is installed in a temporary directory and placed first on the child process `PATH`; the global pnpm installation is unchanged. The test verifies the generated lockfile and pnpm workspace build approvals before running lint, type checking, tests, and the production build. CI runs both frameworks with npm, pnpm 10.34.6, and pnpm 11.22.0.
 
-### Fixing Bugs
+Also test the experimental opt-in with Bedrock available: selected components and a Bedrock project should be created, while an ordinary starter should contain neither. A failed setup or dependency installation must exit with a failure and must not claim that project creation succeeded.
 
-1. Create an issue describing the bug
-2. Reference the issue in your pull request
-3. Include steps to reproduce and test the fix
+Verify the browser UI disconnected and connected, switching Testnet/Devnet, signing cancellation, and failed submissions. A live wallet check needs the configured Xaman/WalletConnect app identifiers or an installed GemWallet extension.
 
-### Adding New Contracts
+## Pull requests and releases
 
-1. Add your contract to `packages/bedrock/src/`
-2. Update the README with usage instructions
-3. Add example interactions to the frontend if applicable
+Keep changes focused, explain the resulting behavior, and include exact verification results and any unverified external integrations. Preserve user changes when working in shared checkouts.
 
-## Pull Request Process
+Before publishing, rerun the distributable checks from the final commit and inspect the package contents for generated build artifacts or private environment files. Publish only with explicit release authorization.
 
-1. Update documentation for any new features
-2. Ensure all tests pass and code is formatted
-3. Update the README.md if needed
-4. Reference any related issues in the PR description
-5. Wait for review from maintainers
-
-## Code of Conduct
-
-- Be respectful and inclusive
-- Provide constructive feedback
-- Focus on what is best for the community
-
-## Questions?
-
-Feel free to open an issue for any questions or concerns.
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the MIT License.
+Contributions are licensed under the repository's MIT license.

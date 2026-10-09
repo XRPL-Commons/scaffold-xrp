@@ -36,7 +36,7 @@ export async function removeCommand(moduleName?: string): Promise<void> {
       value: name,
     }));
 
-    const answers = await inquirer.prompt([
+    const answers = await inquirer.prompt<{ module: string }>([
       {
         type: 'list',
         name: 'module',
@@ -59,7 +59,7 @@ export async function removeCommand(moduleName?: string): Promise<void> {
   }
 
   // Confirm removal
-  const { confirm } = await inquirer.prompt([
+  const { confirm } = await inquirer.prompt<{ confirm: boolean }>([
     {
       type: 'confirm',
       name: 'confirm',

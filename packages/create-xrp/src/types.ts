@@ -7,6 +7,7 @@ export type Primitive = 'contract' | 'vault' | 'escrow';
 export interface Answers {
   projectName: string;
   framework: 'nextjs' | 'nuxt';
+  experimental: boolean;
   primitives: Primitive[];
   packageManager: 'pnpm' | 'npm' | 'yarn';
   modules?: string[];

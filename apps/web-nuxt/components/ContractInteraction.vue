@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { WalletManager } from 'xrpl-connect'
+
 const { walletManager, isConnected, addEvent, showStatus } = useWallet()
 
 const contractAddress = ref('')
@@ -53,7 +55,9 @@ const handleCallContract = async () => {
       transaction.FunctionArguments = stringToHex(functionArgs.value)
     }
 
-    const txResult = await walletManager.value.signAndSubmit(transaction as any)
+    const txResult = await walletManager.value.signAndSubmit(
+      transaction as unknown as Parameters<WalletManager['signAndSubmit']>[0],
+    )
 
     callResult.value = {
       success: true,
@@ -63,12 +67,13 @@ const handleCallContract = async () => {
 
     showStatus('Contract called successfully!', 'success')
     addEvent('Contract Called', txResult)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
     callResult.value = {
       success: false,
-      error: error.message,
+      error: message,
     }
-    showStatus(`Contract call failed: ${error.message}`, 'error')
+    showStatus(`Contract call failed: ${message}`, 'error')
     addEvent('Contract Call Failed', error)
   } finally {
     isCalling.value = false
@@ -87,8 +92,8 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
         <p class="text-sm text-muted-foreground">Call functions on deployed contracts</p>
       </div>
       <button
-        @click="loadCounterExample"
         class="inline-flex items-center justify-center rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground h-8 px-3"
+        @click="loadCounterExample"
       >
         Load Example
       </button>
@@ -105,7 +110,7 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
           type="text"
           placeholder="rAddress..."
           class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        />
+        >
       </div>
 
       <div class="space-y-2">
@@ -116,7 +121,7 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
           type="text"
           placeholder="e.g., increment, get_value"
           class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        />
+        >
         <p v-if="functionName" class="text-xs text-muted-foreground">
           Hex: {{ functionNameHex }}
         </p>
@@ -132,7 +137,7 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
           type="text"
           placeholder="e.g., 5, hello"
           class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        />
+        >
         <p v-if="functionArgs" class="text-xs text-muted-foreground">
           Hex: {{ functionArgsHex }}
         </p>
@@ -150,9 +155,9 @@ const functionArgsHex = computed(() => functionArgs.value ? stringToHex(function
 
       <button
         v-if="isConnected && contractAddress && functionName"
-        @click="handleCallContract"
         :disabled="isCalling"
         class="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        @click="handleCallContract"
       >
         {{ isCalling ? 'Calling Contract...' : 'Call Contract' }}
       </button>

@@ -1,0 +1,9 @@
+node_modules
+.pnpm-store
+.next
+.nuxt
+.output
+.turbo
+dist
+packages/create-xrp/template
+pnpm-lock.yaml

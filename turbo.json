@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": ["**/.env", "**/.env.*"],
+  "globalEnv": ["NEXT_PUBLIC_*", "NUXT_PUBLIC_*"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -8,6 +9,19 @@
     },
     "lint": {
       "dependsOn": ["^lint"]
+    },
+    "type-check": {
+      "dependsOn": ["^type-check"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
+    "create-xrp#build": {
+      "cache": false,
+      "outputs": ["dist/**", "template/**"]
+    },
+    "create-xrp#test": {
+      "cache": false
     },
     "dev": {
       "cache": false,

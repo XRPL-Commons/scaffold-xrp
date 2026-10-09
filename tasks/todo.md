@@ -1,0 +1,81 @@
+# Hackathon starter implementation
+
+## Agreed scope
+
+Create a polished, simple Next.js or Nuxt project with XRP payments, Xaman, GemWallet, and WalletConnect. Default to Testnet and offer Devnet. The CLI asks whether to use experimental features (default no), then asks which smart primitives to include and sets up Bedrock when selected. No in-app experimental toggle.
+
+## Plan
+
+- [x] Migrate Next to xrpl-connect v1 React bindings; clean payment UI, network handling, validation, and wallet setup.
+- [x] Migrate Nuxt to xrpl-connect v1 Vue bindings with equivalent behavior.
+- [x] Fix CLI experimental selection, reproducible template packaging, generated documentation, error handling, and type errors.
+- [x] Align dependencies, Node requirements, lint/type-check commands, lockfile, and contributor documentation.
+- [x] Verify clean installs, builds, lint, type checks, CLI generation, regression tests, and production HTTP responses; document unavailable browser verification.
+- [x] Review integrated diff and prepare commits.
+- [x] Push signed commits and open [PR #16](https://github.com/XRPL-Commons/scaffold-xrp/pull/16).
+
+## Verification requirements
+
+Verify both framework starters generated from the packaged CLI. Default output must omit smart UI and Bedrock. Experimental selection must produce selected smart UI and Bedrock setup, clearly explaining experimental network limitations. Setup/install errors must fail honestly. Wallet setup must handle missing configuration, connection cancellation, account/network changes, and submission errors without falsely claiming ledger success.
+
+## Review
+
+Implemented in an isolated worktree. The original checkout and its uncommitted CLI version edit remain preserved.
+
+Passed:
+
+- Frozen workspace install, lint, type checks, regression tests, and production builds.
+- Next payment tests (11), Nuxt payment tests (12), and CLI packaging/generation/error tests (8).
+- Fresh Next and Nuxt projects generated from the packed CLI: npm install, lint, applicable type checks, tests, and production builds.
+- Actual Bedrock initialization with contract, vault, and escrow; generated experimental Next project install, lint, and build.
+- Production HTTP responses from both apps; Next contains the payment UI and network choices. Nuxt serves its client-rendered application shell. Next output includes page metadata.
+- Production dependency audit: zero reported advisories.
+
+Limits:
+
+- Browser runtime had no connections (`agent.browsers.list()` returned an empty list). Interactive browser behavior and real Xaman, GemWallet, and WalletConnect signing/approvals have not been verified.
+- Full dependency audit still reports four high and two critical development-tool advisories through Nuxt tooling and the Next ESLint plugin. Compatible dependency overrides were applied. Nuxt devtools are disabled; forcing patched simple-git v4 broke Nuxt initialization and was reverted. The remaining node-forge and braces advisories had no patched version available in the installed dependency paths. A clean production dependency audit does not imply a clean development dependency audit.
+
+## pnpm installation regression
+
+- [x] Reproduce installation with pnpm 11.22.0: ignored overrides plus ERR_PNPM_IGNORED_BUILDS on hidden stdout.
+- [x] Preserve pnpm-workspace.yaml settings for flat projects, use allowBuilds, and stream installer output.
+- [x] Verify fresh Next/Nuxt installs using pnpm. Additional CI coverage for npm, pnpm 10, and pnpm 11 is integrated after the user approved publishing on October 8.
+
+## Next wallet hydration regression
+
+- [x] Identify the custom-element SSR boundary behind the reported derived-style mismatch.
+- [x] Load the connector with SSR disabled; lint/build pass and production HTML contains the loading placeholder with no wallet custom element. Applied to existing manual-test projects as well.
+
+## Next TypeScript starter
+
+- [x] Convert Next application code to strict TypeScript, preserving the official React provider.
+- [x] Update CLI generation, module detection, documentation, and checks for TypeScript files.
+- [x] Verify CLI regression tests and freshly generated TypeScript default/experimental starters locally. The user approved publishing these changes on October 8.
+
+Fresh Next and Nuxt projects now install through the CLI with pnpm 11.22.0 and pass lint, type checks where applicable, tests, and builds. Repaired the pnpm settings and installation in `/tmp/xrp-cli-testing/test` without changing application files.
+
+Manual developer-experience review completed; the user requested publishing the reviewed changes on October 8.
+
+Local TypeScript verification: CLI tests (8) and type check passed. Generated default Next starter using pnpm 11.22.0 passed type check, lint, payment tests (11), and production build. Generated experimental Next starter using pnpm 10.34.6 and actual Bedrock initialization passed type check, lint, and production build. The rebuilt local CLI is ready at `packages/create-xrp/dist/index.js`; the default manual-test project is `/tmp/xrp-cli-testing/typescript-next`. No additional CI was triggered and no post-review changes were pushed.
+
+## Clean starter canvas
+
+- [x] Match the supplied reference with a spacious header, short introduction, account/payment cards, and restrained footer in Next and Nuxt.
+- [x] Remove repeated connection/setup guidance and keep the destination tag in an accessible disclosure without changing payment validation.
+- [x] Share the app layout with CLI-generated pages so default and experimental templates stay consistent.
+- [x] Verify locally and rebuild the CLI for manual review; do not push or trigger CI.
+
+Clean-canvas review: removed visible network labels from both headers while retaining accessible names. Next and Nuxt lint, type checks, and production builds pass; existing Next payment tests (11) and CLI tests (8) pass. Default and all seven experimental component combinations compile as generated TSX/Vue templates. Both preview servers return HTTP 200; Next HTML confirms no repeated onboarding panel or hosted-wallet setup disclosure. No browser connection is available for interactive visual verification. Local production previews run on ports 3100 (Next) and 3101 (Nuxt); pushes and CI remain held for manual review.
+
+## XRP logo
+
+- [x] Reuse `xrpl-rlusd-faucet/public/xrpl-logo.png` in both headers, verify it is included in generated projects, and refresh the local previews.
+
+Logo verification: both framework lint/build checks passed, the CLI bundle contains byte-identical copies of the source asset, and both preview URLs serve it successfully. Changes remain local.
+
+## Approved PR update — October 8
+
+The user approved the reviewed UI and requested the repository PR. Integrated the prepared package-manager checks: CI builds the CLI once and verifies generated Next/Nuxt projects through actual CLI dependency installation with npm, pnpm 10.34.6, and pnpm 11.22.0. The existing PR #16 will receive all reviewed changes; no duplicate PR is needed. Earlier notes about holding pushes document the review stage and no longer apply.
+
+Final publishing checks: the integrated packed-CLI smoke test passed for both frameworks with pnpm 11.22.0, including actual installation, lint, type checks, tests, and builds. The October 8 audit remains zero production advisories and four high/two critical development-tool advisories.

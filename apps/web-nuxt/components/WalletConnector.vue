@@ -1,66 +1,38 @@
 <script setup lang="ts">
-const THEMES = {
-  dark: {
-    '--xc-background-color': '#1a202c',
-    '--xc-background-secondary': '#2d3748',
-    '--xc-background-tertiary': '#4a5568',
-    '--xc-text-color': '#F5F4E7',
-    '--xc-text-muted-color': 'rgba(245, 244, 231, 0.6)',
-    '--xc-primary-color': '#3b99fc',
-  },
-  light: {
-    '--xc-background-color': '#ffffff',
-    '--xc-background-secondary': '#f5f5f5',
-    '--xc-background-tertiary': '#eeeeee',
-    '--xc-text-color': '#111111',
-    '--xc-text-muted-color': 'rgba(17, 17, 17, 0.6)',
-    '--xc-primary-color': '#2563eb',
-  },
-  purple: {
-    '--xc-background-color': '#1e1b4b',
-    '--xc-background-secondary': '#2d2659',
-    '--xc-background-tertiary': '#3d3261',
-    '--xc-text-color': '#f3e8ff',
-    '--xc-text-muted-color': 'rgba(243, 232, 255, 0.6)',
-    '--xc-primary-color': '#a78bfa',
-  },
-} as const
+import { WalletConnector as XrplWalletConnector } from '@xrpl-commons/xrpl-connect-vue'
 
-const { walletManager } = useWallet()
-const walletConnectorRef = useWalletConnector(walletManager)
-const currentTheme = ref<keyof typeof THEMES>('dark')
-const isClient = ref(false)
+const { showStatus } = useWallet()
 
-onMounted(async () => {
-  isClient.value = true
+function handleConnecting(walletId: string) {
+  showStatus(`Connecting to ${walletId}…`, 'info')
+}
 
-  // Register the web component
-  try {
-    const { WalletConnectorElement } = await import('xrpl-connect')
+function handleConnected() {
+  showStatus('Wallet connected', 'success')
+}
 
-    // Define the custom element if not already defined
-    if (!customElements.get('xrpl-wallet-connector')) {
-      customElements.define('xrpl-wallet-connector', WalletConnectorElement)
-    }
-  } catch (error) {
-    console.error('Failed to register wallet connector:', error)
-  }
-})
-
-const themeStyle = computed(() => ({
-  ...THEMES[currentTheme.value],
-  '--xc-font-family': 'inherit',
-  '--xc-border-radius': '12px',
-  '--xc-modal-box-shadow': '0 10px 40px rgba(0, 0, 0, 0.3)',
-}))
+function handleError(error: { message?: string }) {
+  showStatus(error.message || 'Wallet connection failed', 'error')
+}
 </script>
 
 <template>
-  <xrpl-wallet-connector
-    v-if="isClient"
-    ref="walletConnectorRef"
-    id="wallet-connector"
-    :style="themeStyle"
-    primary-wallet="xaman"
-  />
+  <div class="flex flex-col items-end gap-1">
+    <XrplWalletConnector
+      id="wallet-connector"
+      aria-label="Choose an XRPL wallet"
+      primary-wallet="xaman"
+      :wallets="['xaman', 'gemwallet', 'walletconnect']"
+      show-unavailable
+      theme="light"
+      :css-vars="{
+        '--xc-font-family': 'inherit',
+        '--xc-border-radius': '0.5rem',
+        '--xc-connect-button-border-radius': '0.375rem',
+      }"
+      @connecting="handleConnecting"
+      @connect="handleConnected"
+      @error="handleError"
+    />
+  </div>
 </template>

@@ -61,7 +61,7 @@ export async function addCommand(moduleSource?: string): Promise<void> {
       value: '__custom__',
     });
 
-    const answers = await inquirer.prompt([
+    const answers = await inquirer.prompt<{ module: string }>([
       {
         type: 'list',
         name: 'module',
@@ -71,7 +71,7 @@ export async function addCommand(moduleSource?: string): Promise<void> {
     ]);
 
     if (answers.module === '__custom__') {
-      const urlAnswer = await inquirer.prompt([
+      const urlAnswer = await inquirer.prompt<{ url: string }>([
         {
           type: 'input',
           name: 'url',

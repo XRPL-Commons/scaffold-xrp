@@ -37,6 +37,11 @@ const MODULE_CONFIG_FILE = 'module.json';
 
 const MODULE_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
+function getWebDir(projectDir: string): string {
+  const monorepoWebDir = join(projectDir, 'apps', 'web');
+  return existsSync(monorepoWebDir) ? monorepoWebDir : projectDir;
+}
+
 export function validateModuleName(name: string): { valid: boolean; error?: string } {
   if (!name || name.length === 0) {
     return { valid: false, error: 'Module name cannot be empty' };
@@ -141,7 +146,7 @@ export function detectFramework(projectDir: string): 'nextjs' | 'nuxt' | null {
   if (existsSync(join(webDir, 'nuxt.config.ts'))) {
     return 'nuxt';
   }
-  if (existsSync(join(webDir, 'next.config.js')) || existsSync(join(webDir, 'next.config.mjs'))) {
+  if (['next.config.ts', 'next.config.js', 'next.config.mjs'].some((file) => existsSync(join(webDir, file)))) {
     return 'nextjs';
   }
 
@@ -232,15 +237,9 @@ function copyModuleFiles(
   moduleConfig: ModuleConfig,
   framework: 'nextjs' | 'nuxt'
 ): void {
-  const webDir = join(projectDir, 'apps', 'web');
+  const webDir = getWebDir(projectDir);
   const modulesDir = join(webDir, 'modules', moduleConfig.name);
-  const bedrockModulesDir = join(
-    projectDir,
-    'packages',
-    'bedrock',
-    'modules',
-    moduleConfig.name
-  );
+  const bedrockModulesDir = join(projectDir, 'packages', 'bedrock', 'modules', moduleConfig.name);
 
   // Ensure directories exist
   mkdirSync(modulesDir, { recursive: true });
@@ -337,7 +336,7 @@ function installModuleDependencies(
 
   try {
     const subcommand = packageManager === 'npm' ? 'install' : 'add';
-    const webDir = join(projectDir, 'apps', 'web');
+    const webDir = getWebDir(projectDir);
     execFileSync(packageManager, [subcommand, ...dependencies], { cwd: webDir, stdio: 'pipe' });
     return true;
   } catch (error) {
@@ -382,7 +381,7 @@ async function runPostInstall(
         ...process.env,
         SCAFFOLD_XRP_PROJECT_DIR: projectDir,
         SCAFFOLD_XRP_FRAMEWORK: framework,
-        SCAFFOLD_XRP_WEB_DIR: join(projectDir, 'apps', 'web'),
+        SCAFFOLD_XRP_WEB_DIR: getWebDir(projectDir),
       },
     });
     return true;
@@ -550,7 +549,7 @@ export function removeModule(
 
   try {
     // Remove module directory from web app
-    const webModuleDir = join(projectDir, 'apps', 'web', 'modules', moduleName);
+    const webModuleDir = join(getWebDir(projectDir), 'modules', moduleName);
     if (existsSync(webModuleDir)) {
       rmSync(webModuleDir, { recursive: true, force: true });
     }
@@ -594,6 +593,7 @@ export function isScaffoldXrpProject(dir: string): boolean {
   const hasAppsWeb = existsSync(join(dir, 'apps', 'web'));
   const hasTurboJson = existsSync(join(dir, 'turbo.json'));
   const hasXrplConnect =
+    existsSync(join(dir, 'apps', 'web', 'components', 'providers', 'WalletProvider.tsx')) ||
     existsSync(join(dir, 'apps', 'web', 'components', 'providers', 'WalletProvider.js')) ||
     existsSync(join(dir, 'apps', 'web', 'composables', 'useWallet.ts'));
 

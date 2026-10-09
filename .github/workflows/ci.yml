@@ -1,0 +1,72 @@
+name: Verify starters
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  repository:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm type-check
+      - run: pnpm test
+      - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: create-xrp-package
+          include-hidden-files: true
+          path: |
+            packages/create-xrp/dist
+            packages/create-xrp/template
+            packages/create-xrp/package.json
+            packages/create-xrp/README.md
+            packages/create-xrp/LICENSE
+            packages/create-xrp/scripts/package-template.mjs
+
+  generated-project:
+    needs: repository
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - framework: nextjs
+            package_manager: npm
+            package_manager_version: ''
+          - framework: nuxt
+            package_manager: npm
+            package_manager_version: ''
+          - framework: nextjs
+            package_manager: pnpm
+            package_manager_version: 10.34.6
+          - framework: nuxt
+            package_manager: pnpm
+            package_manager_version: 10.34.6
+          - framework: nextjs
+            package_manager: pnpm
+            package_manager_version: 11.22.0
+          - framework: nuxt
+            package_manager: pnpm
+            package_manager_version: 11.22.0
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: create-xrp-package
+          path: packages/create-xrp
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node scripts/verify-starter.mjs ${{ matrix.framework }} ${{ matrix.package_manager }} ${{ matrix.package_manager_version }}

@@ -1,9 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
 
-  modules: ['@nuxtjs/tailwindcss'],
+  modules: ['@nuxt/eslint', '@nuxtjs/tailwindcss'],
 
   css: ['~/assets/css/main.css'],
 
@@ -13,8 +13,16 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'A starter kit for building dApps on XRPL with smart contracts' },
+        { name: 'description', content: 'A starter kit for building XRP Ledger dApps' },
       ],
+    },
+  },
+
+  runtimeConfig: {
+    public: {
+      defaultNetwork: 'testnet',
+      xamanApiKey: '',
+      walletConnectProjectId: '',
     },
   },
 
@@ -46,7 +54,7 @@ export default defineNuxtConfig({
     },
   },
 
-  // Run on client side only for wallet components
+  // Keep the starter as a client-rendered Nuxt app while wallet adapters initialize.
   ssr: false,
 
   typescript: {

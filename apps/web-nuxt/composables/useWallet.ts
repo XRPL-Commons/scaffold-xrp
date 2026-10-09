@@ -1,3 +1,4 @@
+import { useWallet as useBindingWallet } from '@xrpl-commons/xrpl-connect-vue'
 import type { WalletManager } from 'xrpl-connect'
 
 interface AccountInfo {
@@ -17,25 +18,29 @@ interface StatusMessage {
   type: 'success' | 'error' | 'warning' | 'info'
 }
 
+/**
+ * Compatibility bridge for optional Contract/Vault/Escrow components.
+ * Wallet state and signing remain owned by xrpl-connect-vue; this composable
+ * derives the old component shape and app status/event helpers.
+ */
 export function useWallet() {
-  // Global state using useState (persists across components)
-  const walletManager = useState<WalletManager | null>('walletManager', () => null)
-  const isConnected = useState<boolean>('isConnected', () => false)
-  const accountInfo = useState<AccountInfo | null>('accountInfo', () => null)
-  const events = useState<WalletEvent[]>('events', () => [])
-  const statusMessage = useState<StatusMessage | null>('statusMessage', () => null)
+  const binding = useBindingWallet()
+  const { selectedNetwork } = useNetworkSelection()
+  const events = useState<WalletEvent[]>('xrpl-wallet-events', () => [])
+  const statusMessage = useState<StatusMessage | null>('xrpl-wallet-status', () => null)
 
-  function setWalletManager(manager: WalletManager | null) {
-    walletManager.value = manager
-  }
+  const walletManager = computed<WalletManager>(() => binding.manager)
+  const isConnected = computed(() => binding.connected.value)
+  const accountInfo = computed<AccountInfo | null>(() => {
+    const account = binding.account.value
+    if (!account) return null
 
-  function setIsConnected(connected: boolean) {
-    isConnected.value = connected
-  }
-
-  function setAccountInfo(info: AccountInfo | null) {
-    accountInfo.value = info
-  }
+    return {
+      address: account.address,
+      network: `${account.network.name} (${account.network.id})`,
+      walletName: binding.manager.wallet?.name || 'Wallet',
+    }
+  })
 
   function addEvent(name: string, data: unknown) {
     const timestamp = new Date().toLocaleTimeString()
@@ -46,22 +51,27 @@ export function useWallet() {
     events.value = []
   }
 
-  function showStatus(message: string, type: StatusMessage['type']) {
+  function showStatus(message: string, type: StatusMessage['type'] = 'info') {
     statusMessage.value = { message, type }
-    setTimeout(() => {
-      statusMessage.value = null
-    }, 5000)
+    const currentStatus = statusMessage.value
+    if (import.meta.client) {
+      window.setTimeout(() => {
+        if (statusMessage.value === currentStatus) statusMessage.value = null
+      }, 5000)
+    }
   }
 
   return {
     walletManager,
     isConnected,
     accountInfo,
+    account: binding.account,
+    network: binding.network,
+    connecting: binding.connecting,
+    error: binding.error,
+    selectedNetwork,
     events,
     statusMessage,
-    setWalletManager,
-    setIsConnected,
-    setAccountInfo,
     addEvent,
     clearEvents,
     showStatus,

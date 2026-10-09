@@ -1,35 +1,55 @@
 <script setup lang="ts">
-const { statusMessage } = useWallet()
+import { useWallet as useBindingWallet } from '@xrpl-commons/xrpl-connect-vue'
 
-const statusVariant = computed(() => {
-  if (!statusMessage.value) return ''
-  const type = statusMessage.value.type
-  if (type === 'success') return 'bg-emerald-100 text-emerald-800'
-  if (type === 'error') return 'bg-destructive/10 text-destructive'
-  if (type === 'warning') return 'bg-amber-100 text-amber-800'
-  return 'bg-secondary text-secondary-foreground'
+const { statusMessage } = useWallet()
+const { error: walletError } = useBindingWallet()
+
+const statusTone = computed(() => {
+  if (statusMessage.value?.type === 'error' || walletError.value) {
+    return 'text-destructive'
+  }
+  if (statusMessage.value?.type === 'warning') {
+    return 'text-amber-700'
+  }
+  return 'text-muted-foreground'
 })
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-    <div class="container flex h-14 items-center">
-      <div class="flex items-center gap-2">
-        <div class="flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background">
-          <span class="font-semibold text-sm">X</span>
-        </div>
-        <span class="font-semibold">Scaffold-XRP</span>
-      </div>
-
-      <div class="flex flex-1 items-center justify-end gap-3">
+  <header class="w-full">
+    <div
+      class="mx-auto flex min-h-24 w-full max-w-6xl flex-wrap items-center gap-4 px-4 py-5 sm:px-6"
+    >
+      <NuxtLink to="/" class="flex items-center gap-3" aria-label="Scaffold-XRP home">
         <span
-          v-if="statusMessage"
-          :class="['inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold', statusVariant]"
+          aria-hidden="true"
+          class="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground text-background"
         >
-          {{ statusMessage.message }}
+          <img
+            src="/xrpl-logo.png"
+            alt=""
+            width="28"
+            height="24"
+            class="object-contain brightness-0 invert"
+          >
         </span>
+        <span class="text-lg font-semibold tracking-tight">Scaffold-XRP</span>
+      </NuxtLink>
+
+      <div class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-3">
+        <NetworkSelector />
         <WalletConnector />
       </div>
+    </div>
+
+    <div
+      v-if="statusMessage || walletError"
+      class="mx-auto w-full max-w-6xl px-4 pb-1 text-right text-sm sm:px-6"
+      :class="statusTone"
+      aria-live="polite"
+      :role="statusMessage?.type === 'error' || walletError ? 'alert' : 'status'"
+    >
+      {{ statusMessage?.message || walletError?.message }}
     </div>
   </header>
 </template>
