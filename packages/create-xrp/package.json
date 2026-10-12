@@ -1,6 +1,6 @@
 {
   "name": "create-xrp",
-  "version": "0.3.1",
+  "version": "0.5.0",
   "description": "CLI tool to scaffold polished XRPL payment apps with Next.js or Nuxt",
   "main": "dist/index.js",
   "bin": {
